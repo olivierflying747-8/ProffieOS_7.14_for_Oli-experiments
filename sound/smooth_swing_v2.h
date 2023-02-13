@@ -10,7 +10,9 @@ public:
   SmoothSwingV2() : SaberBasePassThrough() {}
 
   void Activate(SaberBase* base_font) {
-    STDOUT.println("Activating SmoothSwing V2");
+    #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+      STDOUT.println("Activating SmoothSwing V2");
+    #endif
     if (SFX_swingl) {
       L = &SFX_swingl;
       H = &SFX_swingh;
@@ -20,8 +22,12 @@ public:
     }
     SetDelegate(base_font);
     if (L->files_found() != H->files_found()) {
-      STDOUT.println("Warning, swingl and swingh should have the same number of files.");
+      #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+        STDOUT.println("Warning, swingl and swingh should have the same number of files.");
+      #endif
     }
+
+  #ifndef OSx
     // check for swngxx files to use as accent swings
     if ((SFX_swng || SFX_swing) > 0 && smooth_swing_config.AccentSwingSpeedThreshold > 0.0) {
       STDOUT.println("Accent Swings Enabled.");
@@ -43,6 +49,45 @@ public:
       accent_swings_present = false;
       STDOUT.println("Accent Swings NOT Detected: ");
     }
+  #else // OSx
+    // check for swngxx files to use as accent swings
+    accent_swings_present = false;  // assume failure
+    #ifdef DIAGNOSE_PRESETS
+      if (SFX_swng || SFX_swing) {
+        if (smooth_swing_config.AccentSwingSpeedThreshold > 0.0) {
+          STDOUT.println("Accent Swings Enabled.");
+          STDOUT.print("Polyphonic swings: ");
+          STDOUT.println(SFX_swng.files_found());
+          STDOUT.print("Monophonic swings: ");
+          STDOUT.println(SFX_swing.files_found());
+          accent_swings_present = true;    
+        }
+        else STDOUT.println ("Accent Swings detected but disabled, check INI!");
+      } else {
+        STDOUT.println("Accent Swings NOT Detected. ");
+      }  
+    #else // DIAGNOSE_PRESETS
+      if ((SFX_swng || SFX_swing) && smooth_swing_config.AccentSwingSpeedThreshold > 0.0) accent_swings_present = true;    
+    #endif // DIAGNOSE_PRESETS
+
+    accent_slashes_present = false;   // assume failure
+    #ifdef DIAGNOSE_PRESETS
+      if (SFX_slsh) {
+          if (smooth_swing_config.AccentSlashAccelerationThreshold > 0.0) {
+          STDOUT.println("Accent Slashes Enabled.");
+          STDOUT.print("Polyphonic slashes: ");
+          STDOUT.println(SFX_slsh.files_found());
+          accent_slashes_present = true;
+          } else STDOUT.println("Accent Slashes detected but disabled, check INI!");
+        } else STDOUT.println("Accent Slashes NOT Detected. ");
+    #else // DIAGNOSE_PRESETS
+      if (SFX_slsh && smooth_swing_config.AccentSlashAccelerationThreshold > 0.0) accent_slashes_present = true;
+    #endif //  DIAGNOSE_PRESETS
+
+
+  #endif // OSx
+
+    
   }
 
   void Deactivate() {
@@ -95,6 +140,17 @@ public:
     delegate_->SB_Off(off_type);
   }
 
+#ifdef OSx
+private:
+  bool paused = false;  
+public:
+  // Pause / resume audio overlay
+  void Pause(bool newState) {
+    if (!on_) return;     // not active
+    paused = newState;
+  }
+#endif
+
   enum class SwingState {
     OFF, // waiting for swing to start
     ON,  // swinging
@@ -118,6 +174,9 @@ public:
 
     switch (state_) {
       case SwingState::OFF:
+        #ifdef OSx
+          if (paused) break;
+        #endif
         if (speed < smooth_swing_config.SwingStrengthThreshold) {
 #if 1
           if (monitor.ShouldPrint(Monitoring::MonitorSwings)) {
@@ -191,7 +250,7 @@ public:
       case SwingState::OUT:
         if (!A.isOff() || !B.isOff()) {
           if (monitor.ShouldPrint(Monitoring::MonitorSwings)) {
-            Serial.println("Waiting for volume = 0");
+            STDOUT.println("Waiting for volume = 0");
           }
         }
         PickRandomSwing();

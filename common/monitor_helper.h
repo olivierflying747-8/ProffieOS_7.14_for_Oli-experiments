@@ -13,7 +13,8 @@ public:
 protected:
   void Loop() { monitor.Loop(); }
   bool Parse(const char *cmd, const char* arg) override {
-#ifndef DISABLE_DIAGNOSTIC_COMMANDS
+//#ifndef DISABLE_DIAGNOSTIC_COMMANDS
+#ifdef ENABLE_DEVELOPER_COMMANDS
     if (!strcmp(cmd, "monitor") || !strcmp(cmd, "mon")) {
       if (!strcmp(arg, "swings")) {
         monitor.Toggle(Monitoring::MonitorSwings);
@@ -64,16 +65,37 @@ protected:
         return true;
       }
     }
-#endif
-#ifdef ENABLE_TRACING
+#endif // ENABLE_DEVELOPER_COMMANDS
+
+#if defined (ENABLE_DEVELOPER_COMMANDS) && defined(ENABLE_TRACING) 
+  #ifndef OSx
     if (!strcmp(cmd, "dumptrace")) {
       for (size_t i = 0; i < NELEM(trace); i++) {
 	STDOUT << (const char *)(trace[(trace_pos + i) & (NELEM(trace) - 1)]) << "\n";
       }
       return true;
     }
-#endif
+  #else // OSx
+      if (!strcmp(cmd, "dumptrace")) {
+        for (size_t i = 0; i < NELEM(trace); i++) 
+          if (trace[i]) {
+            STDOUT.print("  "); STDOUT.print(i+1); STDOUT.print(": ");
+            STDOUT.println((char*)(trace[i]));
+            trace[i]=0; 
+          }
+        STDOUT.print("trace_pos = "); STDOUT.println(trace_pos);
+        trace_pos = 0;
+        return true;
+    }
+  #endif // OSx
+
+#endif // ENABLE_DEVELOPER_COMMANDS
     return false;
+  }
+  void Help() {
+    #if defined(COMMANDS_HELP) || !defined(OSx)
+    STDOUT.println(" mon[itor] swings/samples/touch/battery/pwm/clash/temp/serial/fusion - toggle monitoring");
+    #endif
   }
 };
 

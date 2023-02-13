@@ -26,6 +26,34 @@ public:
   float MaxSwingVolume;
   float AccentSwingSpeedThreshold;
   float AccentSlashAccelerationThreshold;
+
+#ifdef OSx
+  // Apply swing sensitivity to smooth swing parameters. 
+  // Call ApplySensitivity(0) once to store unscaled values!
+  void ApplySensitivity(SwSensitivity* sensitivity) {
+      static float SwingSensitivity_ = 0;
+      static float SwingSharpness_ = 0;
+      static float AccentSwingSpeedThreshold_ = 0;
+      static float MaxSwingVolume_ = 0;
+
+      if (!sensitivity) { // just store current values, assummed unscaled
+        SwingSensitivity_ = SwingSensitivity; // STDOUT.print("[smooth_swing_config] Stored SwingSensitivity = "); STDOUT.println(SwingSensitivity_);
+        SwingSharpness_ = SwingSharpness; // STDOUT.print("[smooth_swing_config] Stored SwingSharpness = "); STDOUT.println(SwingSharpness_);
+        AccentSwingSpeedThreshold_ = AccentSwingSpeedThreshold; // STDOUT.print("[smooth_swing_config] Stored AccentSwingSpeedThreshold = "); STDOUT.println(AccentSwingSpeedThreshold_);
+        MaxSwingVolume_ = MaxSwingVolume; // STDOUT.print("[smooth_swing_config] Stored MaxSwingVolume = "); STDOUT.println(MaxSwingVolume_);
+
+      }
+      else { // scale stored parameters to get new current values
+        SwingSensitivity = SwingSensitivity_ * sensitivity->SwingSensitivity_multiplier; // STDOUT.print("[smooth_swing_config] Applied SwingSensitivity = "); STDOUT.println(SwingSensitivity);
+        SwingSharpness = SwingSharpness_ * sensitivity->SwingSharpness_multiplier; // STDOUT.print("[smooth_swing_config] Applied SwingSharpness = "); STDOUT.println(SwingSharpness);
+        AccentSwingSpeedThreshold = AccentSwingSpeedThreshold_ * sensitivity->AccentSwingSpeedThreshold_multiplier; // STDOUT.print("[smooth_swing_config] Applied AccentSwingSpeedThreshold = "); STDOUT.println(AccentSwingSpeedThreshold);
+        MaxSwingVolume = MaxSwingVolume_ * sensitivity->MaxSwingVolume_multiplier; // STDOUT.print("[smooth_swing_config] Applied MaxSwingVolume = "); STDOUT.println(MaxSwingVolume);
+
+      }
+
+  }
+#endif // OSx 
+
 };
 
 SmoothSwingConfigFile smooth_swing_config;

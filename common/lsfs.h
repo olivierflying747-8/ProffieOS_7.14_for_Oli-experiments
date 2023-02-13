@@ -141,11 +141,6 @@ public:
   static File Open(const char* path) {
     return fopen(path, "r");
   }
-  static File OpenRW(const char* path) {
-    File ret = fopen(path, "r+");
-    if (ret) return ret;
-    return OpenForWrite(path);
-  }
   static File OpenFast(const char* path) {
     return fopen(path, "r");
   }
@@ -215,9 +210,6 @@ public:
     if (!SD.exists(path)) return File();
     return SD.open(path);
   }
-  static File OpenRW(const char* path) {
-    return SD.open(path, FILE_WRITE);
-  }
   static File OpenFast(const char* path) {
     // At some point, I put this check in here to make sure that the file
     // exists before we try to open it, as opening directories and other
@@ -269,7 +261,7 @@ public:
     File f_;
   };
 };
-#elif defined(ARDUINO_ARCH_STM32L4)
+#else
 
 #include <FS.h>
 
@@ -333,12 +325,6 @@ public:
     if (!mounted_) return File();
     return DOSFS.open(path, "r");
   }
-  static File OpenRW(const char* path) {
-    if (!mounted_) return File();
-    File f = DOSFS.open(path, "r+");
-    if (!f) f = OpenForWrite(path);
-    return f;
-  }
   static File OpenFast(const char* path) {
     if (!mounted_) return File();
     return DOSFS.open(path, "r");
@@ -351,6 +337,18 @@ public:
     }
     DOSFS.mkdir(p);
   }
+  #ifdef OSx
+  static bool RenamePath(const char* pathFrom, const char* pathTo)
+  {
+    return DOSFS.rename(pathFrom, pathTo);
+  }
+  #endif
+  // #ifdef OSx // TODO uncomment 
+  static File OpenForOverWrite(const char* path) {
+    if (!mounted_) return File();
+    return DOSFS.open(path, "r+");
+  }
+  // #endif
   static File OpenForWrite(const char* path) {
     if (!mounted_) return File();
     File f = DOSFS.open(path, "w");
@@ -399,6 +397,9 @@ public:
     bool isdir() { return _find.attr & F_ATTR_DIR; }
     const char* name() { return _find.filename; }
     size_t size() { return _find.filesize; }
+  #ifdef OSX_ENABLE_MTP
+	char attr() {return _find.attr; }
+  #endif
     
   private:
     char _path[F_MAXPATH];
@@ -409,192 +410,6 @@ private:
 };
 
 bool LSFS::mounted_ = false;
-#elif defined(ESP32)
-
-#include "FS.h"
-#include "SD_MMC.h"
-#include "SD.h"
-
-class LSFS {
-public:
-  typedef File FILE;
-  static bool Begin() {
-
-#if 1
-#define SDCLASS SD_MMC
-    SD_MMC.setPins(sdClkPin, sdCmdPin, sdD0Pin, sdD1Pin, sdD2Pin, sdD3Pin);
-    if (!SD_MMC.begin("/sdcard", false, false, SDMMC_FREQ_DEFAULT, /*maxOpenFiles=*/ 32)) return false;
-
-#endif
-
-#if 0
-#define SDCLASS SD
-    SPI.begin(sdClkPin, sdD0Pin, sdCmdPin);
-    if (!SD.begin(sdD3Pin, SPI, /* frequency= */ 20000000, "/sd" , /* max_file=*/ 32)) return false;
-#endif    
-    
-//    if (!SDCLASS.begin()) return false;
-    uint8_t cardType = SDCLASS.cardType();
-    if (cardType == CARD_NONE) return false;
-    return true;
-  }
-  static bool End() {
-    SDCLASS.end();
-    return true;
-  }
-  static bool Exists(const char* path) {
-    return SDCLASS.exists(path);
-  }
-  static bool Remove(const char* path) {
-    return SDCLASS.remove(path);
-  }
-  static File Open(const char* path) {
-    if (!SDCLASS.exists(path)) return File();
-    File f = SDCLASS.open(path);
-    f.setBufferSize(512);
-    return f;
-  }
-  static File OpenRW(const char* path) {
-    File f = SDCLASS.open(path, FILE_WRITE);
-    f.setBufferSize(512);
-    return f;
-    
-  }
-  static File OpenFast(const char* path) {
-    // At some point, I put this check in here to make sure that the file
-    // exists before we try to open it, as opening directories and other
-    // weird files can cause open() to hang. However, this check takes
-    // too long, and causes audio underflows, so we're going to need a
-    // different approach to not opening directories and weird files. /Hubbe
-    // if (!SDCLASS.exists(path)) return File();
-    File f = SDCLASS.open(path);
-    f.setBufferSize(512);
-    return f;
-  }
-  static File OpenForWrite(const char* path) {
-    File f =  SDCLASS.open(path, FILE_WRITE);
-    if (!f) {
-      PathHelper tmp(path);
-      if (tmp.Dirname()) {
-	SDCLASS.mkdir(tmp);
-	f =  SDCLASS.open(path, FILE_WRITE);
-      }
-    }
-    f.setBufferSize(512);
-    return f;
-  }
-  class Iterator {
-  public:
-    explicit Iterator(const char* dirname) {
-      dir_ = SDCLASS.open(dirname);
-      if (dir_.isDirectory()) {
-	f_ = dir_.openNextFile();
-      }
-    }
-    explicit Iterator(Iterator& other) {
-      dir_ = other.f_;
-      other.f_ = File();
-      f_ = dir_.openNextFile();
-    }
-    ~Iterator() {
-      dir_.close();
-      f_.close();
-    }
-    void operator++() {
-      f_.close();
-      f_ = dir_.openNextFile();
-    }
-    operator bool() { return f_; }
-    bool isdir() { return f_.isDirectory(); }
-    const char* name() { return f_.name(); }
-    size_t size() { return f_.size(); }
-    
-  private:
-    File dir_;
-    File f_;
-  };
-};
-
-
-
-#else
-
-// Standard arduino
-#include <SD.h>
-
-class LSFS {
-public:
-  typedef File FILE;
-  static bool Begin() {
-    return SD.begin(sdCardSelectPin);
-  }
-  static bool End() {
-    return true;
-  }
-  static bool Exists(const char* path) {
-    return SD.exists(path);
-  }
-  static bool Remove(const char* path) {
-    return SD.remove(path);
-  }
-  static File Open(const char* path) {
-    if (!SD.exists(path)) return File();
-    return SD.open(path);
-  }
-  static File OpenRW(const char* path) {
-    return SD.open(path, FILE_WRITE);
-  }
-  static File OpenFast(const char* path) {
-    // At some point, I put this check in here to make sure that the file
-    // exists before we try to open it, as opening directories and other
-    // weird files can cause open() to hang. However, this check takes
-    // too long, and causes audio underflows, so we're going to need a
-    // different approach to not opening directories and weird files. /Hubbe
-    // if (!SD.exists(path)) return File();
-    return SD.open(path);
-  }
-  static File OpenForWrite(const char* path) {
-    File f =  SD.open(path, FILE_WRITE);
-    if (!f) {
-      PathHelper tmp(path);
-      if (tmp.Dirname()) {
-	SD.mkdir(tmp);
-	f =  SD.open(path, FILE_WRITE);
-      }
-    }
-    return f;
-  }
-  class Iterator {
-  public:
-    explicit Iterator(const char* dirname) {
-      dir_ = SD.open(dirname);
-      if (dir_.isDirectory()) {
-	f_ = dir_.openNextFile();
-      }
-    }
-    explicit Iterator(Iterator& other) {
-      dir_ = other.f_;
-      other.f_ = File();
-      f_ = dir_.openNextFile();
-    }
-    ~Iterator() {
-      dir_.close();
-      f_.close();
-    }
-    void operator++() {
-      f_.close();
-      f_ = dir_.openNextFile();
-    }
-    operator bool() { return f_; }
-    bool isdir() { return f_.isDirectory(); }
-    const char* name() { return f_.name(); }
-    size_t size() { return f_.size(); }
-    
-  private:
-    File dir_;
-    File f_;
-  };
-};
-#endif
+#endif // TEENSYDUINO
 
 #endif

@@ -1,12 +1,13 @@
 #ifndef MOTION_LSM6DS3H_H
 #define MOTION_LSM6DS3H_H
 
-constexpr int ProffieOS_log2(int x) {
-  return (x <= 1) ? 0 : (ProffieOS_log2(x/2) + 1);
-}
-
 // Supports LSM6DS3, LSM6DSM and LSM6DSO
-class LSM6DS3H : public I2CDevice, Looper, StateMachine {
+class LSM6DS3H : public I2CDevice, Looper, StateMachine 
+#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+, xPowerManager {
+#else 
+  {
+#endif
 public:
   const char* name() override { return "LSM6DS3H"; }
   enum Registers {
@@ -99,12 +100,16 @@ public:
     OUT_MAG_RAW_Z_H = 0x6B,
     CTRL_SPIAux = 0x70
   };
-
+  // was 105 , 107 
   LSM6DS3H() : I2CDevice(106), Looper(
 #ifndef PROFFIEBOARD
     HFLINK
 #endif    
-  ) {}
+  )
+  #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
+    ,xPowerManager(xPower_Motion, X_PM_MOTION_MS, name()) 
+#endif 
+  {}
 
 #define I2CLOCK() do {							\
   state_machine_.sleep_until_ = millis();				\
@@ -128,44 +133,30 @@ public:
     while (1) {
       first_motion_ = true;
       first_accel_ = true;
-      
-      STDOUT.print("Motion chip ... ");
+
+      #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)
+      STDOUT.print("Motion chip ... ");    
+      #endif
+
       I2CLOCK();
 
       I2C_READ_BYTES_ASYNC(WHO_AM_I, databuffer, 1);
       id_ = databuffer[0];
+      #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)    
       STDOUT.print(id_);
+      #endif
       if (id_  == 105 || id_ == 106 || id_ == 108) {
+        #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)    
         STDOUT.println(" found.");
+        #endif
       } else  {
+        #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
         STDOUT.println(" not found.");
+        #endif
 	goto i2c_timeout;
       }
-
-#ifndef PROFFIEOS_ACCELEROMETER_RANGE
-#define PROFFIEOS_ACCELEROMETER_RANGE 16
-#endif
-#if PROFFIEOS_ACCELEROMETER_RANGE == 4
-#define PROFFIEOS_ACCELEROMETER_RANGE_BITS 8
-#elif PROFFIEOS_ACCELEROMETER_RANGE == 16
-#define PROFFIEOS_ACCELEROMETER_RANGE_BITS 4
-#elif PROFFIEOS_ACCELEROMETER_RANGE == 8
-#define PROFFIEOS_ACCELEROMETER_RANGE_BITS 12
-#elif PROFFIEOS_ACCELEROMETER_RANGE == 2
-#define PROFFIEOS_ACCELEROMETER_RANGE_BITS 0
-#else
-#error unknown PROFFIEOS_ACCELEROMETER_RANGE
-#endif
-      
-#ifndef PROFFIEOS_MOTION_FREQUENCY
-#define PROFFIEOS_MOTION_FREQUENCY 1660
-#endif
-#define PROFFIEOS_MOTION_FREQUENCY_BITS (ProffieOS_log2(PROFFIEOS_MOTION_FREQUENCY/4) << 4)
-
-      // 1.66kHz accel, 16G range
-//      STDOUT << "FOO:" << (PROFFIEOS_MOTION_FREQUENCY_BITS | PROFFIEOS_ACCELEROMETER_RANGE_BITS) << "\n";
-      I2C_WRITE_BYTE_ASYNC(CTRL1_XL, PROFFIEOS_MOTION_FREQUENCY_BITS | PROFFIEOS_ACCELEROMETER_RANGE_BITS);
-      I2C_WRITE_BYTE_ASYNC(CTRL2_G, PROFFIEOS_MOTION_FREQUENCY_BITS | 0xC);   // 1.66kHz gyro, 2000 dps
+      I2C_WRITE_BYTE_ASYNC(CTRL1_XL, 0x84);  // 1.66kHz accel, 16G range
+      I2C_WRITE_BYTE_ASYNC(CTRL2_G, 0x8C);   // 1.66kHz gyro, 2000 dps
       I2C_WRITE_BYTE_ASYNC(CTRL3_C, 0x44);   // ?
       I2C_WRITE_BYTE_ASYNC(CTRL4_C, 0x00);
       I2C_WRITE_BYTE_ASYNC(CTRL5_C, 0x00);
@@ -186,10 +177,15 @@ public:
 			  EXTI_CONTROL_RISING_EDGE, &LSM6DS3H::irq, this);
 
       while (SaberBase::MotionRequested()) {
+        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+        requestPower(); // from Xpower Manager 
+        #endif
 	Poll();
 	if ((last_event_ + I2C_TIMEOUT_MILLIS * 2 - millis()) >> 31) {
 	  TRACE(MOTION, "timeout");
+    #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
 	  STDOUT.println("Motion timeout.");
+    #endif
 	  stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
 			      EXTI_CONTROL_DISABLE, &LSM6DS3H::do_nothing, nullptr);
 	  goto i2c_timeout;
@@ -225,7 +221,7 @@ public:
 	I2C_READ_BYTES_ASYNC(OUTX_L_G, databuffer, 12);
 	// accel data available
 	prop.DoAccel(
-	  MotionUtil::FromData(databuffer + 6, PROFFIEOS_ACCELEROMETER_RANGE / 32768.0,   // 16 g range
+	  MotionUtil::FromData(databuffer + 6, 16.0 / 32768.0,   // 16 g range
 			       Vec3::BYTEORDER_LSB, Vec3::ORIENTATION),
 	  first_accel_);
 	first_accel_ = false;
@@ -239,9 +235,10 @@ public:
         I2CUnlock();
       }
 
-#endif      
+#endif
+      #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)        
       STDOUT.println("Motion disable.");
-
+      #endif
       I2CLOCK();
       I2C_WRITE_BYTE_ASYNC(CTRL2_G, 0x0);  // accel disable
       I2C_WRITE_BYTE_ASYNC(CTRL1_XL, 0x0);  // gyro disable
@@ -251,22 +248,35 @@ public:
       continue;
 
     i2c_timeout:
+      #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
       STDOUT.println("Motion chip timeout, trying auto-reboot of motion chip!");
+      #endif
       while (!I2CLock(true)) YIELD();
       Reset();
       SLEEP(20);
 #define i2c_timeout i2c_timeout2
       I2C_WRITE_BYTE_ASYNC(CTRL3_C, 1);
-#undef i2c_timeout
-#ifdef ARDUINO_ARCH_STM32L4
+#undef i2c_timeout      
     i2c_timeout2:
-#endif      
       I2CUnlock();
       SLEEP(20);
     }
 
     STATE_MACHINE_END();
   }
+
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+    void xKillPower() override
+    {
+        // TODO add here deinit code 
+    }
+    void xRestablishPower() override
+    {
+      requestPower();
+      SaberBase::RequestMotion();
+    }
+#endif
 
   void Dump() override {
     STDOUT << "LSM6DS3H: last_event_ " << last_event_
@@ -322,17 +332,17 @@ public:
     TRACE(MOTION, "Transfer done");
     stm32l4_i2c_notify(Wire._i2c, nullptr, 0, 0);
     I2CUnlock();
+    // accel data available
+    prop.DoAccel(MotionUtil::FromData(databuffer + 6, 16.0 / 32768.0,   // 16 g range
+				      Vec3::BYTEORDER_LSB, Vec3::ORIENTATION),
+		 first_accel_);
+    
+    first_accel_ = false;
     // gyroscope data available
     prop.DoMotion(MotionUtil::FromData(databuffer, 2000.0 / 32768.0,  // 2000 dps
 				       Vec3::BYTEORDER_LSB, Vec3::ORIENTATION),
 		  first_motion_);
     first_motion_ = false;
-    // accel data available
-    prop.DoAccel(MotionUtil::FromData(databuffer + 6, PROFFIEOS_ACCELEROMETER_RANGE / 32768.0,   // 16 g range
-				      Vec3::BYTEORDER_LSB, Vec3::ORIENTATION),
-		 first_accel_);
-    
-    first_accel_ = false;
     last_event_ = millis();
     Poll();
   }

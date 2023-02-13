@@ -3,17 +3,15 @@
 
 #include "../common/analog_read.h"
 
-template<int PIN, int PULLUP_OHMS>
+template<int PIN, int PULLUP>
 struct ExternalPullupBladeID {
   float id() {
     int blade_id = LSAnalogRead(PIN, INPUT);
+//    STDOUT << "BLADE ID: " << blade_id << "\n";
     float volts = blade_id * 3.3f / 1024.0f;  // Volts at bladeIdentifyPin
-    float amps = (3.3f - volts) / PULLUP_OHMS;
-#if 0
-   STDOUT << "BLADE ID: " << blade_id << "\n";
-   STDOUT << "VOLTS: " << volts << "\n";
-   STDOUT << "AMPS: " << amps << "\n";
-#endif
+//    STDOUT << "VOLTS: " << volts << "\n";
+    float amps = (3.3f - volts) / PULLUP;
+//    STDOUT << "AMPS: " << amps << "\n";
     float resistor = volts / amps;
     return resistor;
   }
@@ -32,12 +30,12 @@ struct InternalPullupBladeID {
 };
 #endif
 
-#if PROFFIEBOARD_VERSION - 0 > 0
+#if (PROFFIEBOARD_VERSION - 0 > 0) || defined(ULTRA_PROFFIE)
 template<int PIN>
 struct SnapshotBladeID {
   float id() {
     pinMode(PIN, INPUT_PULLUP);
-    delay(1); // let everything settle
+    delay(100); // let everything settle
     return LSAnalogRead(PIN, INPUT_PULLUP); // 0-1024.0
   }
 };
@@ -61,37 +59,19 @@ struct BridgedPullupBladeID {
   }
 };
 
-template<int N, class BLADE_ID>
-struct AverageBladeIDNTimes {
-  float id() {
-    float id = 0;
-    BLADE_ID blade_id;
-    for (int i = 0; i < N; i++) id += blade_id.id();
-    return id / N;
-  }
-};
-
 template<class POWER_PINS, class BLADE_ID>
 struct EnablePowerBladeID {
   float id() {
-    int delay_time = 10;
     POWER_PINS power_pins;
-#if defined(SHARED_POWER_PINS) && defined(BLADE_ID_SCAN_MILLIS)
-    if (power_pins.isOn()) delay_time = 0;
-#endif    
     power_pins.Init();
     power_pins.Power(true);
-    delay(delay_time);
+    delay(10);
     BLADE_ID blade_id;
     float ret = blade_id.id();
     power_pins.Power(false);
     power_pins.DeInit();
     return ret;
   }
-};
-
-struct NoBladeID {
-  float id() { return 0.0; }
 };
 
 // Define the default blade ID class.
@@ -102,24 +82,16 @@ struct NoBladeID {
 #define BLADE_ID_CLASS InternalPullupBladeID<bladeIdentifyPin>
 #elif PROFFIEBOARD_VERSION - 0 >= 3
 #define BLADE_ID_CLASS BridgedPullupBladeID<bladeIdentifyPin, bladePin>
-#elif defined(PROFFIEBOARD_VERSION)
-#define BLADE_ID_CLASS SnapshotBladeID<bladeIdentifyPin>
 #else
-#define BLADE_ID_CLASS NoBladeID
+#define BLADE_ID_CLASS SnapshotBladeID<bladeIdentifyPin>
 #endif
 
 #endif  // BLADE_ID_CLASS
 
-#ifdef BLADE_ID_TIMES
-#define BLADE_ID_CLASS2 AverageBladeIDNTimes<BLADE_ID_TIMES, BLADE_ID_CLASS>
-#else
-#define BLADE_ID_CLASS2 BLADE_ID_CLASS
-#endif
-
 #ifdef ENABLE_POWER_FOR_ID
-#define BLADE_ID_CLASS_INTERNAL EnablePowerBladeID<ENABLE_POWER_FOR_ID, BLADE_ID_CLASS2>
+#define BLADE_ID_CLASS_INTERNAL EnablePowerBladeID<ENABLE_POWER_FOR_ID, BLADE_ID_CLASS>
 #else
-#define BLADE_ID_CLASS_INTERNAL BLADE_ID_CLASS2
+#define BLADE_ID_CLASS_INTERNAL BLADE_ID_CLASS
 #endif
 
 #endif  // BLADES_BLADE_ID_H

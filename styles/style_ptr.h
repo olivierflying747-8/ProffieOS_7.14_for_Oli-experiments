@@ -41,6 +41,16 @@ public:
     for (int i = 0; i < num_leds; i++) {
       RetType c = getColor2(i);
       if (ROTATE) c.c = c.c.rotate(rotation);
+      #if defined(OSx) && !defined(OLDPROFILE)
+          // scale with masterBrightness [0, 65535]
+          uint32_t tmp = c.c.r * userProfile.masterBrightness;
+          c.c.r = tmp >> 16;
+          tmp = c.c.g * userProfile.masterBrightness;
+          c.c.g = tmp >> 16;
+          tmp = c.c.b * userProfile.masterBrightness;
+          c.c.b = tmp >> 16;
+      #endif // OSx
+
       if (c.getOverdrive()) {
          blade->set_overdrive(i, c.c);
       } else {
@@ -88,13 +98,6 @@ private:
   HandledTypeSaver handled_type_saver_;
 };
 
-template<class T>
-class ChargingStyle : public Style<T> {
-public:
-  bool NoOnOff() override { return true; }
-  bool Charging() override { return true; }
-};
-
 // Get a pointer to class.
 template<class STYLE>
 StyleAllocator StylePtr() {
@@ -102,32 +105,5 @@ StyleAllocator StylePtr() {
   return &factory;
 };
 
-class StyleFactoryWithDefault : public StyleFactory {
-public:
-  StyleFactoryWithDefault(StyleFactory* allocator,
-			  const char* default_arguments) :
-    allocator_(allocator), default_arguments_(default_arguments) {
-  }
-  BladeStyle* make() override {
-    DefaultArgumentParserWrapper dapw(CurrentArgParser, default_arguments_);
-    CurrentArgParser = &dapw;
-    BladeStyle* ret = allocator_->make();
-    CurrentArgParser = dapw.argParser_;
-    return ret;
-  }
-  
-  StyleFactory* allocator_;
-  const char* default_arguments_;
-};
 
-template<class STYLE>
-StyleAllocator StylePtr(const char* default_arguments) {
-  return new StyleFactoryWithDefault(StylePtr<STYLE>(), default_arguments);
-}
-
-template<class STYLE>
-StyleAllocator ChargingStylePtr() {
-  static StyleFactoryImpl<ChargingStyle<STYLE> > factory;
-  return &factory;
-}
 #endif

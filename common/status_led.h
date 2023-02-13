@@ -40,7 +40,11 @@ public:
     last_millis_ = now_millis;
 
     bool ignited = SaberBase::IsOn();
+#ifndef ULTRA_PROFFIE
     bool usb_on = USBD_Connected();
+#else 
+    bool usb_on = 0;
+#endif
     bool motion = SaberBase::MotionRequested();
     bool charging = !digitalRead(chargeDetectPin);
 
@@ -80,8 +84,11 @@ public:
     uint32_t now_micros = micros();
     uint32_t delta_micros = now_micros - last_micros_;
     last_micros_ = now_micros;
-
+#ifndef OSx
     float loops_per_second = hf_loop_counter.LoopsPerSecond() + 1.0;
+#else
+    float loops_per_second = 1000;// TODO replace for OSx // was hf_loop_counter.LoopsPerSecond() + 1.0; // made this to compile V3
+#endif
     float speed = 500000 / loops_per_second;
     // STDOUT << "LPS:" << loops_per_second << " speed=" << speed << "\n";
     float min_speed = 50;   // 10000 loops per second
@@ -120,6 +127,10 @@ public:
     }
     return false;
   }
+  virtual void Help() {
+    STDOUT << " blink N - blink status LED N times\n";
+  }
+  
 
 private:
   uint32_t blink_start_;

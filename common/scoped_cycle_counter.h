@@ -1,18 +1,15 @@
 #ifndef COMMON_SCOPED_CYCLE_COUNTER_H
 #define COMMON_SCOPED_CYCLE_COUNTER_H
 
+#ifndef OSx  // redefined in XProbe.h
 class ScopedCycleCounter {
 public:
   static inline uint32_t getCycles() {
-#if defined(TEENSYDUINO)
+#ifdef TEENSYDUINO
     return ARM_DWT_CYCCNT - counted_cycles_;
-#elif defined(ARDUINO_ARCH_STM32L4)
+#else
     return DWT->CYCCNT - counted_cycles_;
-#elif defined(ESP32)
-    return cpu_hal_get_cycle_count();
-#else    
-    return 0;
-#endif    
+#endif
   }
   ScopedCycleCounter(uint64_t& dest) :
     dest_(dest) {
@@ -28,7 +25,7 @@ public:
     counted_cycles_ += cycles;
     interrupts();
     dest_ += cycles;
-#endif
+#endif    
   }
 private:
   static uint32_t counted_cycles_;
@@ -37,5 +34,7 @@ private:
 };
 
 uint32_t ScopedCycleCounter::counted_cycles_ = 0;
+
+#endif // OSx
 
 #endif

@@ -3,7 +3,10 @@
 
 #include "linked_list.h"
 #include "vec3.h"
-
+  
+#ifdef OSx
+#include "battery_monitor.h"
+#endif 
 // SaberBase is our main class for distributing saber-related events, such
 // as on/off/clash/etc. to where they need to go. Each SABERFUN below
 // has a corresponding SaberBase::Do* function which invokes that function
@@ -37,32 +40,7 @@ extern SaberBase* saberbases;
     DEFINE_EFFECT(LOW_BATTERY)			\
     DEFINE_EFFECT(POWERSAVE)                    \
     DEFINE_EFFECT(BATTERY_LEVEL)                \
-    DEFINE_EFFECT(VOLUME_LEVEL)                 \
-    /* Allows style to turn blade ON for interactive effects if prop/style support, FAST_ON skips PREON. */          \
-    DEFINE_EFFECT(ON)                           \
     DEFINE_EFFECT(FAST_ON)                      \
-    DEFINE_EFFECT(QUOTE)			\
-    DEFINE_EFFECT(SECONDARY_IGNITION)		\
-    DEFINE_EFFECT(SECONDARY_RETRACTION)		\
-    /* Allows style to turn blade OFF for interactive effects if prop/style support, FAST_OFF skips POSTOFF. */          \
-    DEFINE_EFFECT(OFF)                          \
-    DEFINE_EFFECT(FAST_OFF)                     \
-    DEFINE_EFFECT(OFF_CLASH)                    \
-    DEFINE_EFFECT(NEXT_QUOTE)                   \
-    DEFINE_EFFECT(INTERACTIVE_PREON)            \
-    /* Triggers a Blaster sound to interact with and creates an EFFECT_BLAST if prop/style support. */          \
-    DEFINE_EFFECT(INTERACTIVE_BLAST)            \
-    DEFINE_EFFECT(TRACK)			\
-    DEFINE_EFFECT(BEGIN_BATTLE_MODE)            \
-    DEFINE_EFFECT(END_BATTLE_MODE)              \
-    DEFINE_EFFECT(BEGIN_AUTO_BLAST)             \
-    DEFINE_EFFECT(END_AUTO_BLAST)               \
-    /* Triggers the change for sets of sounds within the font from one alternative to another. */                \
-    DEFINE_EFFECT(ALT_SOUND)			\
-    /* Triggers an optional sound effect during transitions from within a style via TrDoEffect. */         \
-    DEFINE_EFFECT(TRANSITION_SOUND)		\
-    /* Toggles an optonal sound effect loop ON/OFF from within a style via TrDoEffect. */          \
-    DEFINE_EFFECT(SOUND_LOOP)                   \
     /* Blaster effects */                       \
     DEFINE_EFFECT(STUN)				\
     DEFINE_EFFECT(FIRE)				\
@@ -77,31 +55,12 @@ extern SaberBase* saberbases;
     DEFINE_EFFECT(UNJAM)			\
     DEFINE_EFFECT(PLI_ON)			\
     DEFINE_EFFECT(PLI_OFF)                      \
-    /* Mini game effects */                     \
-    DEFINE_EFFECT(GAME_START)                   \
-    DEFINE_EFFECT(GAME_ACTION1)                 \
-    DEFINE_EFFECT(GAME_ACTION2)                 \
-    DEFINE_EFFECT(GAME_CHOICE)                  \
-    DEFINE_EFFECT(GAME_RESPONSE1)               \
-    DEFINE_EFFECT(GAME_RESPONSE2)               \
-    DEFINE_EFFECT(GAME_RESULT1)                 \
-    DEFINE_EFFECT(GAME_RESULT2)                 \
-    DEFINE_EFFECT(GAME_WIN)                     \
-    DEFINE_EFFECT(GAME_LOSE)                    \
     /* user-definable effects */                \
     DEFINE_EFFECT(USER1)			\
     DEFINE_EFFECT(USER2)			\
     DEFINE_EFFECT(USER3)			\
     DEFINE_EFFECT(USER4)			\
-    DEFINE_EFFECT(USER5)			\
-    DEFINE_EFFECT(USER6)			\
-    DEFINE_EFFECT(USER7)			\
-    DEFINE_EFFECT(USER8)                        \
-    /* ERRORS */                                \
-    DEFINE_EFFECT(SD_CARD_NOT_FOUND)            \
-    DEFINE_EFFECT(ERROR_IN_FONT_DIRECTORY)      \
-    DEFINE_EFFECT(ERROR_IN_BLADE_ARRAY)         \
-    DEFINE_EFFECT(FONT_DIRECTORY_NOT_FOUND)     \
+    DEFINE_EFFECT(USER5)
 
 
 #define DEFINE_EFFECT(X) EFFECT_##X,
@@ -150,19 +109,33 @@ protected:
 public:
   enum OffType {
     OFF_NORMAL,
-    OFF_FAST,
     OFF_BLAST,
     OFF_IDLE,
     OFF_CANCEL_PREON,
+    #ifdef OSx
+      SILENT_OFF,
+    #endif
   };
 
   static bool IsOn() { return on_; }
+  #ifndef OSx
   static void TurnOn() {
     on_ = true;
     SaberBase::DoOn();
   }
+  #else // OSx
+  static void TurnOn(bool silent=false) {
+    on_ = true;
+    battery_monitor.SetLoad(true);
+    if (silent) SaberBase::DoSilentOn();
+    else SaberBase::DoOn();
+  }
+  #endif // OSx
   static void TurnOff(OffType off_type) {
     on_ = false;
+    #ifdef OSx
+    battery_monitor.SetLoad(false);
+    #endif
     last_motion_request_ = millis();
     SaberBase::DoOff(off_type);
   }
@@ -171,13 +144,21 @@ public:
 #if NUM_BUTTONS == 0
     return true;
 #else
+  #ifndef OSx
     return IsOn() || (millis() - last_motion_request_) < 20000;
+  #else 
+    return IsOn() || (millis() - last_motion_request_) < X_MOTION_TIMEOUT;
+  #endif
 #endif
   }
   static void RequestMotion() {
     last_motion_request_ = millis();
   }
-
+  #ifdef OSX_ENABLE_MTP
+  static void TimeoutRequestMotion() {
+    last_motion_request_ = 0;
+  }
+  #endif
   static void DumpMotionRequest() {
     STDOUT << "Motion requested: " << MotionRequested()
 	   << " (millis() - last_motion_request=" << (millis() - last_motion_request_)
@@ -247,23 +228,14 @@ public:                                                         \
   
   SABERBASEFUNCTIONS();
 
-  static void DoEffect(EffectType e, float location, int N) {
-    sound_length = 0.0;
-    sound_number = N;
-    CHECK_LL(SaberBase, saberbases, next_saber_);
-    for (SaberBase *p = saberbases; p; p = p->next_saber_) {
-      p->SB_Effect(e, location);
-    }
-    for (SaberBase *p = saberbases; p; p = p->next_saber_) {
-      p->SB_Effect2(e, location);
-    }
-    CHECK_LL(SaberBase, saberbases, next_saber_);
-  }
   static void DoEffectR(EffectType e) { DoEffect(e, (200 + random(700))/1000.0f); }
   static void DoBlast() { DoEffectR(EFFECT_BLAST); }
   static void DoForce() { DoEffectR(EFFECT_FORCE); }
   static void DoBoot() { DoEffect(EFFECT_BOOT, 0); }
   static void DoPreOn() { DoEffect(EFFECT_PREON, 0); }
+  #ifdef OSx
+    static void DoSilentOn() { DoEffect(EFFECT_NONE, 0); }
+  #endif
   static void DoBeginLockup() { DoEffectR(EFFECT_LOCKUP_BEGIN); }
   static void DoEndLockup() { DoEffect(EFFECT_LOCKUP_END, 0); }
   static void DoChange() { DoEffect(EFFECT_CHANGE, 0); }
@@ -271,6 +243,9 @@ public:                                                         \
   static void DoLowBatt() { DoEffect(EFFECT_LOW_BATTERY, 0); }
 
   static float clash_strength_;
+#ifdef OSx
+  static bool monoFont;      // if true don't announce font labels in the preset menu
+#endif
 
   // Note, the full clash strength might not be known
   // at the time that the EFFECT_CLASH event is emitted.
@@ -338,6 +313,8 @@ public:                                                         \
   // For smooth updates or restore.
   static void SetVariation(uint32_t v) {
     current_variation_ = v;
+    // STDOUT.print("[SaberBase.SetVariation] Set "); STDOUT.println(current_variation_);
+
   }
 
 #ifdef DYNAMIC_BLADE_DIMMING
@@ -372,6 +349,7 @@ private:
   static uint32_t current_variation_;
   static ColorChangeMode color_change_mode_;
   SaberBase* next_saber_;
+
 };
 
 #endif

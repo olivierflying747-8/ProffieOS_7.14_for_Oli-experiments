@@ -184,8 +184,8 @@ struct BQ {
 
 template<class T>
 class Biquad {
- public:
   FILTER_TYPE data_[T::biquads + 1][2];
+ public:
   Biquad() { clear(); }
   void clear() {
     for (size_t i = 0; i <= T::biquads; i++) {

@@ -6,8 +6,6 @@
 #include "../common/command_parser.h"
 #include "voice_data.h"
 
-#ifndef DISABLE_TALKIE
-
 #define MAX_K                   10
 #define MAX_SCALE_BITS          6
 #define MAX_SCALE               (1<<MAX_SCALE_BITS)
@@ -955,6 +953,7 @@ public:
   bool isPlaying() const {
     return !eof();
   }
+  void Stop() override {}
 
 #ifdef ENABLE_DEVELOPER_COMMANDS
   bool Parse(const char *cmd, const char* arg) override {
@@ -1032,6 +1031,13 @@ public:
 
     return false;
   }
+
+  void Help() override {
+    #if defined(COMMANDS_HELP) || !defined(OSx)
+    STDOUT.println("say bof/sd/abort - test error messages");
+    STDOUT.println("talkie HEXDATA - play talkie");
+    #endif
+  }
 #endif
 
 private:
@@ -1047,33 +1053,5 @@ private:
   uint8_t periodCounter;
   int32_t x[10];
 };
-
-#else  // DISABLE_TALKIE
-
-// Dummy talkie for giving better error messages.
-class Talkie {
-public:
-  template <typename...> struct always_false { static constexpr bool value = false; };
-  
-  template<typename... Ts>
-  void Say(Ts&&...) {
-    static_assert(always_false<Ts...>::value,
-		  "DISABLE_TALKIE is defined, cannot call talkie.Say(...)");
-  }
-
-  template<typename... Ts>
-  void SayNumber(Ts&&...) {
-    static_assert(always_false<Ts...>::value,
-		  "DISABLE_TALKIE is defined, cannot call talkie.SayNumber(...)");
-  }
-
-  template<typename... Ts>
-  void SayDigit(Ts&&...) {
-    static_assert(always_false<Ts...>::value,
-		  "DISABLE_TALKIE is defined, cannot call talkie.SayDigit(...)");
-  }
-};
-
-#endif  // DISABLE_TALKIE
 
 #endif

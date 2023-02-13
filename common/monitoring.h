@@ -1,6 +1,8 @@
 #ifndef COMMON_MONITORING_H
 #define COMMON_MONITORING_H
 
+// #define ENABLE_TRACING TRACE_CATEGORY_PROP
+
 // Debug printout helper class
 class Monitoring  {
 public:
@@ -98,16 +100,28 @@ void DoTrace(const char* str) {
   interrupts();
 }
 
-#define TRACE(CAT, X) do {				\
-  if (TRACE_CATEGORY(CAT) & (TRACING_CATEGORIES))       \
-    DoTrace(__FILE__ ":" TOSTRING(__LINE__) ": " X);	\
-} while(0)
+#ifndef OSx
+  #define TRACE(CAT, X) do {				\
+    if (TRACE_CATEGORY(CAT) & (TRACING_CATEGORIES))       \
+      DoTrace(__FILE__ ":" TOSTRING(__LINE__) ": " X);	\
+  } while(0)
+#else // OSx
+  #define TRACE(CAT, X) do {				\
+    if (TRACE_CATEGORY(CAT) & (TRACING_CATEGORIES))       \
+      DoTrace(X);	\
+  } while(0)
+#endif // OSx
+
+
 #else
 #define TRACING_CATEGORIES 0
 #define TRACE(CAT, X) do {				\
   if (TRACE_CATEGORY(CAT) & (TRACING_CATEGORIES))       \
     do { } while(0);					\
 } while(0)
+
+
+
 #endif // ENABLE_TRACING
 
 

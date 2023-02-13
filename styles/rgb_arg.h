@@ -31,6 +31,7 @@ protected:
     strcat(default_value, ",");
     itoa(color_.b, default_value + strlen(default_value), 10);
     
+#ifndef OSx 
     const char* arg = CurrentArgParser->GetArg(argnum, "COLOR", default_value);
     if (arg) {
       char* tmp;
@@ -40,7 +41,10 @@ protected:
       // TODO: color names?
       color_ = Color16(r, g, b);
     }
+#endif // OSx 
+
   }
+
 
   Color16 color_;
 };

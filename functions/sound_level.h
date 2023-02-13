@@ -43,10 +43,5 @@ class NoisySoundLevelCompatSVF {
 
 using NoisySoundLevelCompat = SingleValueAdapter<NoisySoundLevelCompatSVF>;
 
-#else  // ENABLE_AUDIO
-
-using NoisySoundLevel = Int<0>;
-using NoisySoundLevelCompat = Int<0>;
-
 #endif  // ENABLE_AUDIO
 #endif

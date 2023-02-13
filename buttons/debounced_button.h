@@ -28,7 +28,8 @@ public:
   }
 
 protected:
-  virtual uint32_t timeout() { return 10; }
+  // virtual uint32_t timeout() { return 10; }
+  virtual uint32_t timeout() { return 20; }
   virtual bool Read() = 0;
 
 private:

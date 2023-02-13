@@ -134,6 +134,10 @@ public:
     return false;
   }
 
+  void Help() override {
+    STDOUT.println(" blade on/off - turn apa102 blade on off");
+  }
+
 protected:
   void Loop() override {
     if (!powered_) {

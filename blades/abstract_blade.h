@@ -29,6 +29,8 @@ public:
     if (current_style_) {
       current_style_->activate();
     }
+    TRACE(PROP, "AbstractBlade.SetStyle");
+
   }
 
   BladeStyle* UnSetStyle() override {
@@ -36,6 +38,7 @@ public:
     if (ret) {
       ret->deactivate();
       num_effects_ = 0;
+      // STDOUT.println("Deleting style "); 
     }
     current_style_ = nullptr;
     return ret;
@@ -85,6 +88,8 @@ public:
     return GetPrimaryBlade() == this;
   }
 
+
+
   void SB_On2() override {
     SB_Effect2(EFFECT_IGNITION, 0);
   }
@@ -95,7 +100,6 @@ public:
 	SB_Effect2(EFFECT_BLAST, (200 + random(700)) / 1000.0f);
 	break;
       case OFF_NORMAL:
-      case OFF_FAST:
 	SB_Effect2(EFFECT_RETRACTION, 0);
         break;
       case OFF_IDLE:
@@ -106,14 +110,10 @@ public:
   }
   
 protected:
-  BladeStyle *current_style_ = nullptr;
+  BladeStyle *current_style_  = nullptr;
 private:
   size_t num_effects_ = 0;
   BladeEffect effects_[5];
 };
-
-#ifdef BLADE_ID_SCAN_MILLIS
-bool ScanBladeIdNow();
-#endif  
 
 #endif

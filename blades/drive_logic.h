@@ -53,6 +53,7 @@ template<class LED, class Enable=void>
 class DriveLogic : public LEDInterface {
 public:
   float PWMMultiplier() {
+    // return 1.0f;  // direct drive for testing
     float V = battery_monitor.battery();
     float dv = LED::MaxVolts - LED::P2Volts;
     float di = LED::MaxAmps - LED::P2Amps;

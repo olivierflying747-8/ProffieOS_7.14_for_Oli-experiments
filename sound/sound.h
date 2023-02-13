@@ -3,7 +3,11 @@
 // DMA-driven audio output.
 #define AUDIO_BUFFER_SIZE 44
 #define AUDIO_RATE 44100
-#define NUM_WAV_PLAYERS 7
+#ifndef OSx
+  #define NUM_WAV_PLAYERS 7
+#else 
+  #define NUM_WAV_PLAYERS 8
+#endif
 
 #include "click_avoider_lin.h"
 #include "waveform_sampler.h"
@@ -39,7 +43,7 @@ RefPtr<BufferedWavPlayer> GetFreeWavPlayer()  {
   return RefPtr<BufferedWavPlayer>();
 }
 
-RefPtr<BufferedWavPlayer> GetWavPlayerPlaying(const Effect* effect) {
+RefPtr<BufferedWavPlayer> GetWavPlayerPlaying(Effect* effect) {
   for (size_t unit = 0; unit < NELEM(wav_players); unit++) {
     if (wav_players[unit].isPlaying() &&
 	wav_players[unit].current_file_id().GetEffect() == effect) {
@@ -48,48 +52,6 @@ RefPtr<BufferedWavPlayer> GetWavPlayerPlaying(const Effect* effect) {
   }
   return RefPtr<BufferedWavPlayer>();
 }
-
-#ifdef KILL_OLD_PLAYERS
-RefPtr<BufferedWavPlayer> GetOrFreeWavPlayer(Effect* e)  {
-  if (!e->GetFollowing() && !e->GetKillable() && GetWavPlayerPlaying(e)) {
-    STDERR << "MAKING " << e->GetName() << " killable.\n";
-    e->SetKillable(true);
-  }
-  RefPtr<BufferedWavPlayer> ret = GetFreeWavPlayer();
-  if (ret) return ret;
-
-  BufferedWavPlayer* p = nullptr;
-  float best_remaining = 1000.0;
-  for (size_t unit = 0; unit < NELEM(wav_players); unit++) {
-    if (wav_players[unit].isPlaying() &&
-	wav_players[unit].refs() == 0 &&
-	wav_players[unit].current_file_id().GetEffect() &&
-	wav_players[unit].current_file_id().GetEffect()->GetKillable()) {
-      float remaining = wav_players[unit].length() - wav_players[unit].pos();
-      if (remaining < best_remaining) {
-	best_remaining = remaining;
-	p = wav_players + unit;
-      }
-    }
-  }
-  if (p) {
-    STDERR << "KILING PLAYER " << WhatUnit(p) << "\n";
-    p->set_fade_time(0.001);
-    p->FadeAndStop();
-    while (p->isPlaying()) {
-#if VERSION_MAJOR >= 4
-      armv7m_core_yield();
-#endif
-    }
-    return RefPtr<BufferedWavPlayer>(p);
-  }
-  return RefPtr<BufferedWavPlayer>();
-}
-#else
-RefPtr<BufferedWavPlayer> GetOrFreeWavPlayer(Effect* e)  {
-  return GetFreeWavPlayer();
-}
-#endif
 
 RefPtr<BufferedWavPlayer> RequireFreeWavPlayer()  {
   while (true) {
@@ -115,9 +77,7 @@ void SetupStandardAudioLow() {
     wav_players[i].reset_volume();
   }
   dynamic_mixer.streams_[NELEM(wav_players)] = &beeper;
-#ifndef DISABLE_TALKIE  
   dynamic_mixer.streams_[NELEM(wav_players)+1] = &talkie;
-#endif
 }
 
 void SetupStandardAudio() {
@@ -125,7 +85,22 @@ void SetupStandardAudio() {
   SetupStandardAudioLow();
   dac.SetStream(&dynamic_mixer);
 }
+#ifdef OSx
+uint8_t GetNrOFPlayingPlayers(bool excludeTrack = false)
+{   
+  uint8_t nrPlaying = 0;
+  for (size_t i = 0; i < NELEM(wav_players); i++) {
+    if (wav_players[i].isPlaying() ) {
+      nrPlaying++;
+    }
+  }
+  if(excludeTrack) {
+    if(track_player_ && nrPlaying) nrPlaying--; // nr of player excluding track player 
+  }
 
+  return nrPlaying;
+}
+#endif
 
 #include "../common/config_file.h"
 #include "hybrid_font.h"
@@ -144,6 +119,5 @@ SmoothSwingV2 smooth_swing_v2;
 
 #define LOCK_SD(X) do { } while(0)
 #include "../common/sd_card.h"
-#include "effect.h"
 
 #endif  // ENABLE_AUDIO

@@ -4,6 +4,8 @@
 #include "../common/preset.h"
 #include "../common/arg_parser.h"
 #include "../functions/int_arg.h"
+#include "styles.h"
+
 
 class NamedStyle {
 public:
@@ -18,24 +20,30 @@ public:
 #if NUM_BLADES == 0
     return nullptr;
 #else    
-    // Technically we should call run on these.
-    IntArg<1, 0> preset_arg;
-    IntArg<2, 1> style_arg;
-    int preset = preset_arg.getInteger(0);
-    int style = style_arg.getInteger(0);
-    
-    StyleAllocator allocator = nullptr;
-    if (preset < 0 || preset >= (int)(current_config->num_presets))
-      return nullptr;
-    
-    Preset* p = current_config->presets + preset;
-#define GET_PRESET_STYLE(N) if (style == N) allocator = p->style_allocator##N;
-    ONCEPERBLADE(GET_PRESET_STYLE);
-    if (!allocator) return nullptr;
-    CurrentArgParser->Shift(2);
-    // ArgParser ap(SkipWord(CurrentArgParser->GetArg(2, "", "")));
-    // CurrentArgParser = &ap;
-    return allocator->make();
+  #if !defined(OSx) || defined(OLDPROFILE)
+        // Technically we should call run on these.
+        IntArg<1, 0> preset_arg;
+        IntArg<2, 1> style_arg;
+        int preset = preset_arg.getInteger(0);
+        int style = style_arg.getInteger(0);
+        
+        StyleAllocator allocator = nullptr;
+        if (preset < 0 || preset >= (int)(current_config->num_presets))
+          return nullptr;
+        
+      
+        Preset* p = current_config->presets + preset;
+    #define GET_PRESET_STYLE(N) if (style == N) allocator = p->style_allocator##N;
+        ONCEPERBLADE(GET_PRESET_STYLE);
+        if (!allocator) return nullptr;
+        CurrentArgParser->Shift(2);
+        // ArgParser ap(SkipWord(CurrentArgParser->GetArg(2, "", "")));
+        // CurrentArgParser = &ap;
+        return allocator->make();
+  #else // OSx
+    // temporary switch, whole parser goes to sink
+    TRACE(PROP, "BuiltinPresetAllocator.make");
+  #endif
 #endif    
   }
 };
@@ -45,6 +53,7 @@ BuiltinPresetAllocator builtin_preset_allocator;
 NamedStyle named_styles[] = {
 #ifndef DISABLE_BASIC_PARSER_STYLES
   { "standard", StyleNormalPtrX<RgbArg<1, CYAN>, RgbArg<2, WHITE>, IntArg<3, 300>, IntArg<4, 800>>(),
+     // "standard", StyleNormalPtr<Cyan, White, 300, 800>(),
     "Standard blade, color, clash color, extension time, retraction time",
   },
   // Combine onspark, inoutsparktip, gradient, customizable blast/clash/lockup colors
@@ -132,6 +141,7 @@ public:
     if (!style) return nullptr;
     ArgParser ap(SkipWord(str));
     CurrentArgParser = &ap;
+    STDOUT.print("Making style "); STDOUT.print(str);
     return style->style_allocator->make();
   }
 
@@ -365,36 +375,49 @@ public:
     return LSPtr<char>(ret);
   }
 
-  bool Parse(const char *cmd, const char* arg) override {
-    if (!strcmp(cmd, "list_named_styles")) {
-      // Just print one per line.
-      // Skip the last one (builtin)
-      for (size_t i = 0; i < NELEM(named_styles) - 1; i++) {
-	STDOUT.println(named_styles[i].name);
+  #if !defined(OSx) || defined(OLDPROFILE)
+    bool Parse(const char *cmd, const char* arg) override {
+      if (!strcmp(cmd, "list_named_styles")) {
+        // Just print one per line.
+        // Skip the last one (builtin)
+        for (size_t i = 0; i < NELEM(named_styles) - 1; i++) {
+    STDOUT.println(named_styles[i].name);
+        }
+        for (size_t i = 0; i < current_config->num_presets; i++) {
+    for (size_t j = 1; j <= NUM_BLADES; j++) {
+        STDOUT << "builtin " << i << " " << j << "\n";
+    }
+        }
+        return true;
       }
-      for (size_t i = 0; i < current_config->num_presets; i++) {
-	for (size_t j = 1; j <= NUM_BLADES; j++) {
-	  STDOUT << "builtin " << i << " " << j << "\n";
-	}
+
+      if (!strcmp("describe_named_style", cmd)) {
+        if (NamedStyle* style = FindStyle(arg)) {
+    STDOUT.println(style->description);
+    ArgParserPrinter arg_parser_printer(SkipWord(arg));
+    CurrentArgParser = &arg_parser_printer;
+    do {
+      BladeStyle* tmp = style->style_allocator->make();
+      delete tmp;
+    } while (arg_parser_printer.next());
+        }
+        return true;
       }
-      return true;
+
+      return false;
     }
 
-    if (!strcmp("describe_named_style", cmd)) {
-      if (NamedStyle* style = FindStyle(arg)) {
-	STDOUT.println(style->description);
-	ArgParserPrinter arg_parser_printer(SkipWord(arg));
-	CurrentArgParser = &arg_parser_printer;
-	do {
-	  BladeStyle* tmp = style->style_allocator->make();
-	  delete tmp;
-	} while (arg_parser_printer.next());
-      }
-      return true;
+    void Help() override {
+      STDOUT.println(" list_named_styles - List all available named styles");
+      STDOUT.println(" describe_named_style <style> - show what arguments a style requires");
     }
+  #else // OSx
+    bool Parse(const char *cmd, const char* arg) override { return false; }
+    void Help() override {}
+  #endif // OSx
 
-    return false;
-  }
+
+  
 };
 
 StyleParser style_parser;

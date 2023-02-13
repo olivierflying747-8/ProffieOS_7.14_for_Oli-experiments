@@ -50,9 +50,6 @@ public:
   Vec3 operator*(float f) const {
     return Vec3(x * f, y * f, z * f);
   }
-  Vec3 operator*(const Vec3& o) const {
-    return Vec3(x * o.x, y * o.y, z * o.z);
-  }
   Vec3 operator*=(float f) {
     x*=f;
     y*=f;

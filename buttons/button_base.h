@@ -109,7 +109,13 @@ protected:
         current_modifiers &=~ button_;
         if (millis() - push_millis_ < BUTTON_SHORT_CLICK_TIMEOUT) {
           SendClick(EVENT_CLICK_SHORT);
-        } else if (millis() - push_millis_ < 2500) {
+        }
+        #ifdef ULTRA_PROFFIE
+        else if(millis() - push_millis_ < 1500) {
+          SendClick(EVENT_CLICK_MEDIUM);
+        }
+        #endif 
+        else if (millis() - push_millis_ < 2500) {
 	  // Long clicks cannot be "saved", so just emit immediately.
           Send(EVENT_CLICK_LONG);
         }
@@ -122,7 +128,8 @@ protected:
   }
 
   bool Parse(const char* cmd, const char* arg) override {
-#ifndef DISABLE_DIAGNOSTIC_COMMANDS    
+// #ifndef DISABLE_DIAGNOSTIC_COMMANDS    
+#ifdef ENABLE_DEVELOPER_COMMANDS
     if (!strcmp(cmd, name_)) {
       EVENT e = EVENT_CLICK_SHORT;
       int cnt = 0;
@@ -161,6 +168,18 @@ protected:
     }
 #endif    
     return false;
+  }
+
+  void Help() override {
+    #if defined(COMMANDS_HELP) || !defined(OSx)
+#ifndef DISABLE_DIAGNOSTIC_COMMANDS    
+    STDOUT.print(" ");
+    STDOUT.print(name_);
+    STDOUT.print(" - clicks the ");
+    STDOUT.print(name_);
+    STDOUT.println(" button");
+#endif
+    #endif
   }
 
   const char* name_;

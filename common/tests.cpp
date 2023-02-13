@@ -6,13 +6,11 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <memory.h>
 
 #include <iostream>
-
 
 // cruft
 #define NUM_BLADES 3
@@ -22,12 +20,9 @@
 #define ACCEL_MEASUREMENTS_PER_SECOND 1600
 #define HEX 16
 
-#define current_directory "."
-#define next_current_directory(dir) nullptr
-#define previous_current_directory(dir) nullptr
-#define last_current_directory() "."
-
 int random(int x) { return rand() % x; }
+
+const char install_time[] = __DATE__ " " __TIME__;
 
 const char* GetSaveDir() { return NULL; }
 
@@ -40,6 +35,9 @@ int32_t clampi32(int32_t x, int32_t a, int32_t b) {
   if (x < a) return a;
   if (x > b) return b;
   return x;
+}
+int constexpr toLower(char x) {
+  return (x >= 'A' && x <= 'Z') ? x - 'A' + 'a' : x;
 }
 
 class Looper {
@@ -69,12 +67,9 @@ char* itoa( int value, char *ret, int radix )
 #define interrupts() do{}while(0)
 #define SCOPED_PROFILER() do { } while(0)
 
-#define KEEP_SAVEFILES_WHEN_PROGRAMMING
-
 #include "stdout.h"
-Print standard_print;
-Print* default_output = &standard_print;
-Print* stdout_output = &standard_print;
+Print* default_output;
+Print* stdout_output;
 ConsoleHelper STDOUT;
 
 void PrintQuotedValue(const char *name, const char* str) {
@@ -95,6 +90,7 @@ void PrintQuotedValue(const char *name, const char* str) {
     }
   }
   STDOUT.write('\n');
+  
 }
 
 #include "monitoring.h"
@@ -198,9 +194,6 @@ int PresetOrder() {
 }
 
 void test_current_preset() {
-  CurrentPreset p;
-  p.Load(0);
-
   CurrentPreset preset;
   // Cleanup
   RemovePresetINI();
@@ -608,132 +601,15 @@ void color_tests() {
   STDOUT << tests << " tests.\n";
 }
 
-#include "config_file.h"
-
-class TestConfigFile : public ConfigFile {
-public:
-  void iterateVariables(VariableOP *op) override {
-    CONFIG_VARIABLE2(clash_threshold, 1.0);
-    CONFIG_VARIABLE2(volume, -1);
-    CONFIG_VARIABLE2(dimming, 16384);
-  }
-  float clash_threshold;
-  int volume;
-  int dimming;
-};
-
-void config_file_tests() {
-  LSFS::Remove("testconfig.ini");
-  LSFS::Remove("testconfig.tmp");
-  TestConfigFile f;
-  f.ReadINIFromRootDir("testconfig");
-
-  for (int v = 5; v < 10; v++) {
-    f.volume = v;
-    f.WriteToRootDir("testconfig");
-  
-    TestConfigFile f2;
-    f2.ReadINIFromRootDir("testconfig");
-    CHECK_EQ(f2.volume, v);
-  }
-  
-  f.WriteToRootDir("testconfig");
-  f.WriteToRootDir("testconfig");
-  f.WriteToRootDir("testconfig");
-}
-
-#include "command_parser.h"
-CommandParser* parsers = NULL;
-
-class TestParser : public CommandParser {
-public:
-  bool Parse(const char* cmd, const char* arg) override {
-    if (!strcmp("lines", cmd)) {
-      STDOUT << "C line\n";
-      STDOUT << "F line\n";
-      STDOUT << "D line\n";
-      STDOUT << "B line\n";
-      STDOUT << "A line\n";
-      STDOUT << "E line\n";
-      return true;
-    }
-    return false;
-  }
-};
-
-TestParser test_parser;
-
-void command_parser_test() {
-  char tmp[100];
-  char tmp2[100];
-  int lines;
-  lines = RunCommandAndGetSingleLine("lines", nullptr, 1, tmp, 100);
-  CHECK_EQ(lines, 6);
-  CHECK_STREQ(tmp, "C line");
-  lines = RunCommandAndGetSingleLine("lines", nullptr, 2, tmp, 100);
-  CHECK_EQ(lines, 6);
-  CHECK_STREQ(tmp, "F line");
-  lines = RunCommandAndGetSingleLine("lines", nullptr, 6, tmp, 100);
-  CHECK_EQ(lines, 6);
-  CHECK_STREQ(tmp, "E line");
-
-  bool x;
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, nullptr, tmp, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "A line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "B line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "C line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "D line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "E line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, false);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "F line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, false);
-  CHECK_EQ(x, false);
-
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, nullptr, tmp, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "F line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "E line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "D line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "C line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp, "B line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp, tmp2, true);
-  CHECK_EQ(x, true);
-  CHECK_STREQ(tmp2, "A line");
-  x = RunCommandAndFindNextSortedLine<100>("lines", nullptr, tmp2, tmp, true);
-  CHECK_EQ(x, false);
-}
-
 int main() {
-  command_parser_test();
-  
+  color_tests();
+  fuse_tests();
+  test_rotate();
   extras = false;
   test_current_preset();
   fprintf(stderr, "Extra variables enabled....\n");
   extras = true;
   test_current_preset();
-
-  config_file_tests();
-  fuse_tests();
-  test_rotate();
   byteorder_tests();
   extrapolator_test();
-  color_tests();
 }

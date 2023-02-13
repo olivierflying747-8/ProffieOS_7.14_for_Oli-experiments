@@ -41,7 +41,11 @@ public:
   }
 private:
 #define SHOW_COLOR_STYLE_DEFINE(N) BladeStyle* style##N##_;
+#ifndef OSx
   ONCEPERBLADE(SHOW_COLOR_STYLE_DEFINE)
+#else // OSx
+  ONCEPERSUPPORTEDBLADE(SHOW_COLOR_STYLE_DEFINE)
+#endif
 };
 
 template<class T, class SHORT_STYLE = ShowColorStyle>
@@ -57,6 +61,7 @@ public:
       blade->SetStyle(new Style<SHORT_STYLE>());
     }
   }
+#ifndef OSx
   void Start(int blade, const char* str) {
 #define SHOW_COLOR_STYLE_START2(N)		\
     case N:					\
@@ -79,6 +84,21 @@ public:
       ONCEPERBLADE(SHOW_COLOR_STYLE_STOP2)
     }
   }
+#else // OSx uses conditional blade iterator, which is not compatibla with "case"
+  void Start(int blade, const char* str) {
+    #define SHOW_COLOR_STYLE_START2(N)	if(blade==N) SetStyle(current_config->blade##N, str);	
+    ONCEPERBLADE(SHOW_COLOR_STYLE_START2)
+  }
+  void Start(int blade) { Start(blade, ""); }
+  void Stop(int blade) {
+    #define SHOW_COLOR_STYLE_STOP2(N)			\
+      if (blade==N) {						\
+        delete current_config->blade##N->UnSetStyle();	\
+        current_config->blade##N->SetStyle(style_);	\
+      }
+    ONCEPERBLADE(SHOW_COLOR_STYLE_STOP2)
+  }
+#endif // OSx
 private:
   BladeStyle* style_;
 };

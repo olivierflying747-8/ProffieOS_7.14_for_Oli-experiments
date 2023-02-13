@@ -13,11 +13,11 @@ using BladeEffectType = EffectType;
     HANDLED_FEATURE_DRAG = 1 << 3,
     HANDLED_FEATURE_MELT = 1 << 4,
     HANDLED_FEATURE_LIGHTNING_BLOCK = 1 << 5,
-    HANDLED_FEATURE_INTERACTIVE_PREON = 1 << 6,
-    HANDLED_FEATURE_INTERACTIVE_BLAST = 1 << 7,
   };
 
-#include "../styles/blade_style.h"
+// #ifdef OSx
+  #include "../styles/blade_style.h"
+// #endif
 
 struct BladeEffect {
   BladeEffectType type;
@@ -67,6 +67,10 @@ public:
   virtual BladeStyle* UnSetStyle() = 0;
   virtual void SetStyle(BladeStyle* style) = 0;
   virtual BladeStyle* current_style() const = 0;
+  #if defined(OSx) && !defined(OLDPROFILE)
+      virtual StyleHeart StylesAccepted() = 0;     // flags indicating the type of styles needed for this blade (StyleHeart)
+  #endif // OSx
+
 
   // Let the blade know that this style handles "effect".
   static void HandleFeature(HandledFeature feature) {
@@ -97,12 +101,6 @@ public:
       case EFFECT_STAB:
 	BladeBase::HandleFeature(HANDLED_FEATURE_STAB);
 	break;
-      case EFFECT_INTERACTIVE_PREON:
-        BladeBase::HandleFeature(HANDLED_FEATURE_INTERACTIVE_PREON);
-        break;
-      case EFFECT_INTERACTIVE_BLAST:
-        BladeBase::HandleFeature(HANDLED_FEATURE_INTERACTIVE_BLAST);
-        break;
       default:
 	break;
     }
@@ -146,5 +144,7 @@ public:
 private:
   uint32_t last_detected_;
 };
+
+
 
 #endif

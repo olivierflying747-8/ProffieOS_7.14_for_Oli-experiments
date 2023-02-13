@@ -25,12 +25,9 @@ public:
   static inline void delay_nanos(uint32_t nanos) {
 #ifdef TEENSYDUINO
     uint32_t scale = F_CPU / 1000000;
-#elif defined(ARDUINO_ARCH_STM32L4)
+#else    
     uint32_t scale = SystemCoreClock / 1000000;
-#elif defined(ESP32)
-    uint32_t scale = 240000000;  // FIXME
-#endif
-    
+#endif    
     uint32_t n = (nanos * scale + 2) / 3000;
   
     __asm__ __volatile__(
@@ -74,7 +71,6 @@ public:
     for (int i = Color8::num_bytes(byteorder_); i >= 0; i--) OutByte(0xff);
   }
 
-  int pin() const override { return pin_; }
   int num_leds() const override { return num_leds_; }
   Color8::Byteorder get_byteorder() const override { return byteorder_; }
   void Enable(bool on) override {

@@ -3,12 +3,25 @@
 
 #include "battery_monitor.h"
 
-#if VERSION_MAJOR >= 4
+#if (VERSION_MAJOR >= 4 && !defined(ULTRA_PROFFIE)) || (defined(ULTRA_PROFFIE) && PF_BOOSTER == 1)
 
 // Turns off booster when we don't need it anymore.
-class Booster : Looper, StateMachine, CommandParser {
+class Booster : Looper, StateMachine, CommandParser 
+#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+, xPowerManager {
+#else 
+  {
+#endif
 public:
+#ifndef OSx
   Booster() : Looper(), CommandParser() {}
+#else // OSx: schedule booster loop at 100 ms
+  Booster() : Looper(), CommandParser()
+#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+  , xPowerManager(xPower_Audio, X_PM_BOOST_MS, name())
+  #endif
+   {}    // was 100000
+#endif // OSx
   const char* name() override { return "Booster"; }
 
   bool Active() {
@@ -19,7 +32,8 @@ public:
     if (t < 10000) return true;
     if (prop.NeedsPower()) return true;
     bool on = false;
-    SaberBase::DoIsOn(&on);
+    //SaberBase::DoIsOn(&on); was , but for some reason it fails 
+    on = SaberBase::IsOn();
     return on;
   }
 
@@ -46,12 +60,20 @@ protected:
   void Loop() override {
     STATE_MACHINE_BEGIN();
     while (true) {
-      while (Active()) YIELD();
+      while (Active())
+      {
+        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+        requestPower();
+        #endif
+        YIELD();
+      }
       // 10 * 0.1 s = 1 second
       for (i_ = 0; i_ < 10 && !Active(); i_++)
 	SLEEP(100);
       if (Active()) continue;
+      #if (defined(OSx) && defined(DIAGNOSE_AUDIO)) || !defined(OSx)  
       STDOUT.println("Booster off.");
+      #endif
       digitalWrite(boosterPin, LOW); // turn the booster off
       // pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
       on_ = false;
@@ -61,9 +83,10 @@ protected:
   }
 
   bool Parse(const char *cmd, const char* arg) override {
+  #ifdef ENABLE_DEVELOPER_COMMANDS
     if (!strcmp(cmd, "booster")) {
       if (!strcmp(arg, "on")) {
-	Enable();
+	      Enable();
         return true;
       }
       if (!strcmp(arg, "off")) {
@@ -71,8 +94,27 @@ protected:
         return true;
       }
     }
+  #endif // ENABLE_DEVELOPER_COMMANDS
     return false;
   }
+
+  void Help() {
+    #if defined(COMMANDS_HELP) || !defined(OSx)
+    STDOUT.println(" booster on/off - turn booster on or off");
+    #endif
+  }
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+    void xKillPower() override
+    {
+        digitalWrite(boosterPin, LOW); // turn the booster off
+        pinMode(boosterPin, INPUT);
+    }
+    void xRestablishPower() override
+    {
+      requestPower(); 
+    }
+#endif
 
 private:
   bool on_;
@@ -85,8 +127,20 @@ Booster booster;
 inline void EnableBooster() {
   booster.Enable();
 }
+#ifdef ULTRA_PROFFIE
+void SilentEnableBooster(bool on) {
+  if(on)
+        digitalWrite(boosterPin, HIGH);
+  else 
+        digitalWrite(boosterPin, LOW);
+}
+#endif
 
 #else
 inline void EnableBooster() { }
+  #ifdef ULTRA_PROFFIE
+  void SilentEnableBooster(bool on) { }
+  #endif // end PROFFIELite
 #endif   // V4
+
 #endif

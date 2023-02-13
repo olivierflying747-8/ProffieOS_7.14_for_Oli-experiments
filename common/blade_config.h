@@ -9,11 +9,20 @@ struct BladeConfig {
 
   // Blade driver.
 #define DEFINE_BLADES(N) BladeBase* blade##N;
+  #ifndef OSx
   ONCEPERBLADE(DEFINE_BLADES);
+  #else // OSx
+    ONCEPERSUPPORTEDBLADE(DEFINE_BLADES);
+  #endif
 
-  // Blade presets
-  Preset* presets;
-  size_t num_presets;
+  #if !defined(OSx) || defined(OLDPROFILE)
+    // Blade presets
+    Preset* presets;
+    size_t num_presets;
+  #else // OSx
+    vector<xPreset>* presets;
+  #endif
+
 
   const char* save_dir;
 };

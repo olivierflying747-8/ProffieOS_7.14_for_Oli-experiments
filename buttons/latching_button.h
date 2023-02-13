@@ -49,6 +49,14 @@ protected:
     return false;
   }
 
+  void Help() override {
+    STDOUT.print(" ");
+    STDOUT.print(name_);
+    STDOUT.print(" - toggles the ");
+    STDOUT.print(name_);
+    STDOUT.println(" button");
+  }
+
   bool Read() override {
     return digitalRead(pin_) == LOW;
   }

@@ -1,3 +1,5 @@
+#ifndef PROFCONFIG_H
+#define PROFCONFIG_H
 // This config file contains all the things should be the same for all
 // V2 proffiboard configurations. In most cases there should be no need
 // to change anything in this file.
@@ -91,3 +93,4 @@ enum SaberPins {
 #if DOSFS_SDCARD - 0 == 0
 #error Tools->DOSFS should be set to SDCARD (SPI)
 #endif
+#endif // PROFCONFIG_H

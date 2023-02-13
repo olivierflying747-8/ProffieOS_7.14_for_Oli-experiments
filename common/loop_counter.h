@@ -1,6 +1,7 @@
 #ifndef COMMON_LOOP_COUNTER_H
 #define COMMON_LOOP_COUNTER_H
 
+#ifndef OSx // redefined in XProbe.h
 class LoopCounter {
 public:
   float LoopsPerSecond() {
@@ -33,5 +34,6 @@ private:
   int millis_sum_ = 0;
   uint32_t last_millis_ = 0;
 };
+#endif // OSx
 
 #endif

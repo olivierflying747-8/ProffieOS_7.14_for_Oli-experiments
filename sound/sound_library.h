@@ -8,9 +8,7 @@ enum SayType {
   SAY_WHOLE,
 };
 
-#ifdef SAY_COLOR_LIST
 EFFECT(clrlst); // spoken color names for SAY_COLOR_LIST
-#endif
 // New colors should be added at end of enum and assigned numbers for each COLOR_ should not be changed.
 enum ColorNumber {
   COLOR_RED = 1,
@@ -137,18 +135,6 @@ public:
     }
   }
 
-  void SayBatteryVolts() {
-    SayBatteryLevel();
-    SayNumber(battery_monitor.battery(), SAY_DECIMAL);
-    SayVolts();
-  }
-	
-  void SayBatteryPercent() {
-    SayBatteryLevel();
-    SayNumber(battery_monitor.battery_percent(), SAY_WHOLE);
-    SayPercent();
-  }
-
   void SayAccept () { Play("maccept.wav"); }
   void SayAdjustBlackLevel() { Play("mblack.wav"); }
   void SayAdjustColorHue() { Play("mhue.wav"); }
@@ -218,7 +204,6 @@ public:
   void SayMininumVolume() { Play("volmin.wav"); }
   void SayNoChoreographyAvailable() { Play("nochreo.wav"); }
   void SayOffColor() { Play("moff.wav"); }
-  void SayOffOption() {Play("moffopt.wav"); }
   void SayOption() { Play("moptnum.wav"); }
   void SayPercent() { Play("mpercent.wav"); }
   void SayPostOffColor() { Play("mpstoff.wav"); }
@@ -267,11 +252,9 @@ public:
   void SaySettingsMenu() { Play("msetsub.wav"); }
   void SayStyleSettings() { Play("stylstm.wav"); }
 
-#ifdef SAY_COLOR_LIST
   void SayColor(ColorNumber n) {
     Play(SoundToPlay(&SFX_clrlst, n - 1));
   }
-#endif
 
   void SayBool(bool v) {
     if (v) {

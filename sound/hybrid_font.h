@@ -1,6 +1,9 @@
 #ifndef SOUND_HYBRID_FONT_H
 #define SOUND_HYBRID_FONT_H
 #include "../common/fuse.h"
+#ifdef OSx
+#include "../props/xMenu.h"   // need emojis
+#endif
 
 class FontConfigFile : public ConfigFile {
 public:
@@ -8,7 +11,6 @@ public:
     CONFIG_VARIABLE2(humStart, 100);
     CONFIG_VARIABLE2(volHum, 15);
     CONFIG_VARIABLE2(volEff, 16);
-    CONFIG_VARIABLE2(ProffieOSHumDelay, 0.0f);
     CONFIG_VARIABLE2(ProffieOSSwingSpeedThreshold, 250.0f);
     CONFIG_VARIABLE2(ProffieOSSwingVolumeSharpness, 0.5f);
     CONFIG_VARIABLE2(ProffieOSMaxSwingVolume, 2.0f);
@@ -29,17 +31,7 @@ public:
 #endif
     for (Effect* e = all_effects; e; e = e->next_) {
       char name[32];
-      strcpy(name, "ProffieOS.");
-      switch (e->GetFileType()) {
-	case Effect::FileType::SOUND:
-	  strcat(name, "SFX.");
-	  break;
-	case Effect::FileType::IMAGE:
-	  strcat(name, "IMG.");
-	  break;
-	default:
-	  continue;
-      }
+      strcpy(name, "ProffieOS.SFX.");
       strcat(name, e->GetName());
       strcat(name, ".");
       char* x = name + strlen(name);
@@ -78,10 +70,7 @@ public:
   int volHum;
   // Effect volume (0-16) defaults to 16.
   int volEff;
-  // Milliseconds from beginning of out.wav to delay hum.
-  // If not specified or set to 0 (no delay), humStart will be used.
-  // Defaults to 0
-  int ProffieOSHumDelay;
+
   // How fast (degrees per second) we have to swing before a swing
   // effect is triggered. Defaults to 250.
   float ProffieOSSwingSpeedThreshold;
@@ -149,7 +138,9 @@ public:
   void Activate() {
     SetupStandardAudio();
     font_config.ReadInCurrentDir("config.ini");
-    STDOUT.print("Activating ");
+    #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+      STDOUT.print("Activating ");
+    #endif
     // TODO: Find more reliable way to figure out if it's a monophonic or polyphonic font!!!!
     if (SFX_in || SFX_out) {
       monophonic_hum_ = false;
@@ -162,21 +153,31 @@ public:
         if (SFX_humm) {
 	  monophonic_hum_ = false;
           guess_monophonic_ = false;
-          STDOUT.print("plecter polyphonic");
+          #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+            STDOUT.print("plecter polyphonic");
+          #endif
         } else {
           guess_monophonic_ = true;
-          STDOUT.print("monophonic");
+          #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+            STDOUT.print("monophonic");
+          #endif
         }
       } else {
         guess_monophonic_ = false;
-        STDOUT.print("hybrid");
+        #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+          STDOUT.print("hybrid");
+        #endif
       }
     } else {
       guess_monophonic_ = false;
-      STDOUT.print("polyphonic");
+      #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+        STDOUT.print("polyphonic");
+      #endif
     }
 
-    STDOUT.println(" font.");
+    #if defined(DIAGNOSE_PRESETS) || !defined(OSx)
+      STDOUT.println(" font.");
+    #endif
     SaberBase::Link(this);
     Looper::Link();
     SetHumVolume(1.0);
@@ -202,7 +203,25 @@ public:
     }
     return true;
   }
+#ifdef OSx
+  State GetState()
+  {
+    return state_;
+  }
 
+  bool IsFontPlayersPlaying()
+  { 
+    // check if all players are finished
+
+    if(hum_player_) if(hum_player_->isPlaying()) return true;
+    if(next_hum_player_) if(next_hum_player_->isPlaying()) return true;
+    if(swing_player_) if(swing_player_->isPlaying()) return true;
+    if(lock_player_) if(lock_player_->isPlaying()) return true;
+            
+    return false;
+
+  }
+#endif
   void Deactivate() {
     lock_player_.Free();
     hum_player_.Free();
@@ -218,7 +237,7 @@ public:
   RefPtr<BufferedWavPlayer> swing_player_;
   RefPtr<BufferedWavPlayer> lock_player_;
 
-  void PlayMonophonic(Effect* f, Effect* loop, float xfade = 0.003f)  {
+  void PlayMonophonic(Effect* f, Effect* loop)  {
     EnableAmplifier();
     if (!next_hum_player_) {
       next_hum_player_ = GetFreeWavPlayer();
@@ -228,11 +247,11 @@ public:
       }
     }
     if (hum_player_) {
-      hum_player_->set_fade_time(xfade);
+      hum_player_->set_fade_time(0.003);
       hum_player_->FadeAndStop();
       hum_player_.Free();
       next_hum_player_->set_volume_now(0);
-      next_hum_player_->set_fade_time(xfade);
+      next_hum_player_->set_fade_time(0.003);
       next_hum_player_->set_volume(font_config.volEff / 16.0f);
     } else {
       next_hum_player_->set_volume_now(font_config.volEff / 16.0f);
@@ -242,30 +261,18 @@ public:
     hum_player_->PlayOnce(f);
     current_effect_length_ = hum_player_->length();
     if (loop) hum_player_->PlayLoop(loop);
-   }
-
-  // Use after changing alternative.
-  void RestartHum() {
-    if (hum_player_ && hum_player_->isPlaying()) {
-      PlayMonophonic(getHum(), NULL, 0.2f);
-    }
   }
 
-  RefPtr<BufferedWavPlayer> PlayPolyphonic(const Effect::FileID& f)  {
+  RefPtr<BufferedWavPlayer> PlayPolyphonic(Effect* f)  {
     EnableAmplifier();
-    if (!f) return RefPtr<BufferedWavPlayer>(nullptr);
-    RefPtr<BufferedWavPlayer> player = GetOrFreeWavPlayer(f.GetEffect());
+    if (!f->files_found()) return RefPtr<BufferedWavPlayer>(nullptr);
+    RefPtr<BufferedWavPlayer> player = GetFreeWavPlayer();
     if (player) {
       player->set_volume_now(font_config.volEff / 16.0f);
       player->PlayOnce(f);
       current_effect_length_ = player->length();
-    } else {
-      STDOUT.println("Out of WAV players!");
     }
     return player;
-  }
-  RefPtr<BufferedWavPlayer> PlayPolyphonic(Effect* f)  {
-    return PlayPolyphonic(f->RandomFile());
   }
 
   void Play(Effect* monophonic, Effect* polyphonic) {
@@ -416,57 +423,79 @@ public:
     }
   }
 
+#ifdef OSx
+  bool silentOn = false;  // single-shot on without poweron effect (for fast preset change)
+#endif
+
   void SB_On() override {
     // If preon exists, we've already queed up playing the poweron and hum.
     bool already_started = state_ == STATE_WAIT_FOR_ON && SFX_preon;
+    #ifdef OSx
+      if (silentOn) {
+        already_started = true;   // no power on
+        silentOn = false;         // just this time
+      }
+    #endif
+
     if (monophonic_hum_) {
       if (!already_started) {
-        PlayMonophonic(&SFX_poweron, &SFX_hum);
+	PlayMonophonic(&SFX_poweron, &SFX_hum);
       }
       state_ = STATE_HUM_ON;
     } else {
       state_ = STATE_OUT;
       if (!hum_player_) {
-      	hum_player_ = GetFreeWavPlayer();
-      	if (hum_player_) {
-      	  hum_player_->set_volume_now(0);
-      	  hum_player_->PlayOnce(SFX_humm ? &SFX_humm : &SFX_hum);
-      	  hum_player_->PlayLoop(SFX_humm ? &SFX_humm : &SFX_hum);
-      	}
+	hum_player_ = GetFreeWavPlayer();
+	if (hum_player_) {
+	  hum_player_->set_volume_now(0);
+	  hum_player_->PlayOnce(SFX_humm ? &SFX_humm : &SFX_hum);
+	  hum_player_->PlayLoop(SFX_humm ? &SFX_humm : &SFX_hum);
+	}
         hum_start_ = millis();
       }
       RefPtr<BufferedWavPlayer> tmp;
       if (already_started) {
-        tmp = GetWavPlayerPlaying(getOut());
-      	// Set the length for WavLen<>
-      	if (tmp) {
-      	  tmp->UpdateSaberBaseSoundInfo();
-      	} else {
-      	  SaberBase::ClearSoundInfo();
-      	}
+	tmp = GetWavPlayerPlaying(getOut());
+	// Set the length for WavLen<>
+	if (tmp) {
+	  tmp->UpdateSaberBaseSoundInfo();
+	} else {
+	  SaberBase::ClearSoundInfo();
+	}
       } else {
-        tmp = PlayPolyphonic(getOut());
+	tmp = PlayPolyphonic(getOut());
       }
       hum_fade_in_ = 0.2;
       if (SFX_humm && tmp) {
-        hum_fade_in_ = tmp->length();
-        STDOUT << "HUM fade-in time: " << hum_fade_in_ << "\n";
-      } else if (font_config.ProffieOSHumDelay > 0) {
-        hum_start_ += font_config.ProffieOSHumDelay;
-        STDOUT << "HumDelay: " << font_config.ProffieOSHumDelay << "\n";
-      } else if (font_config.humStart && tmp) {
+	hum_fade_in_ = tmp->length();
+	#ifndef OSx
+	  STDOUT << "HUM fade-in time: " << hum_fade_in_ << "\n";
+  #endif
+      }
+      else if (font_config.humStart && tmp) {
         int delay_ms = 1000 * tmp->length() - font_config.humStart;
         if (delay_ms > 0 && delay_ms < 30000) {
           hum_start_ += delay_ms;
         }
-        STDOUT << "humstart: " << font_config.humStart << "\n";
+	#ifndef OSx
+  STDOUT << "humstart: " << font_config.humStart << "\n";
+  #endif
       }
     }
   }
 
   void SB_Off(OffType off_type) override {
-    SFX_in.SetFollowing(&SFX_pstoff);
     switch (off_type) {
+  
+  #ifdef OSx
+    case SILENT_OFF:
+      state_ = STATE_OFF;
+      hum_player_->set_fade_time(0.01);
+      hum_player_->FadeAndStop();
+      hum_player_.Free();
+      break;
+  #endif
+
       case OFF_CANCEL_PREON:
 	if (state_ == STATE_WAIT_FOR_ON) {
 	  state_ = STATE_OFF;
@@ -474,8 +503,6 @@ public:
 	break;
       case OFF_IDLE:
         break;
-      case OFF_FAST:
-        SFX_in.SetFollowing(nullptr);
       case OFF_NORMAL:
         if (!SFX_in) {
           size_t total = SFX_poweroff.files_found() + SFX_pwroff.files_found();
@@ -509,7 +536,7 @@ public:
           PlayPolyphonic(&SFX_in);
 	  hum_fade_out_ = 0.2;
         }
-        check_postoff_ = !!SFX_pstoff && off_type != OFF_FAST;
+	check_postoff_ = !!SFX_pstoff;
         break;
       case OFF_BLAST:
         if (monophonic_hum_) {
@@ -526,34 +553,26 @@ public:
   void SB_Effect(EffectType effect, float location) override {
     switch (effect) {
       default: return;
-      case EFFECT_PREON: SB_Preon(); return;
-      case EFFECT_POSTOFF: SB_Postoff(); return;
+    #ifdef OSx
+      case EFFECT_NONE:  Play(&SFX_hum, &SFX_humm);  return;  // just start the hum
+    #endif
+    case EFFECT_PREON: SB_Preon(); return;
+    case EFFECT_POSTOFF: SB_Postoff(); return;
       case EFFECT_STAB:
 	if (SFX_stab) { PlayCommon(&SFX_stab); return; }
 	// If no stab sounds are found, fall through to clash
       case EFFECT_CLASH: Play(&SFX_clash, &SFX_clsh); return;
       case EFFECT_FORCE: PlayCommon(&SFX_force); return;
-      case EFFECT_BLAST: Play(&SFX_blaster, &SFX_blst); return;
+      case EFFECT_BLAST: Play(&SFX_blaster, &SFX_blst); return;      
+    #ifndef OSx
       case EFFECT_BOOT: PlayPolyphonic(&SFX_boot); return;
+    #else
+      case EFFECT_BOOT: emojiSounds.Select(emojiSounds_id::boot-1); PlayPolyphonic(&emojiSounds); return;
+    #endif
       case EFFECT_NEWFONT: SB_NewFont(); return;
       case EFFECT_LOCKUP_BEGIN: SB_BeginLockup(); return;
       case EFFECT_LOCKUP_END: SB_EndLockup(); return;
       case EFFECT_LOW_BATTERY: SB_LowBatt(); return;
-      case EFFECT_ALT_SOUND:
-	if (num_alternatives) {
-	  if (SaberBase::sound_number == -1) {
-	    // Next alternative
-	    if (++current_alternative >= num_alternatives)  current_alternative = 0;
-	  } else {
-	    // Select a specific alternative.
-	    current_alternative = std::min<int>(SaberBase::sound_number, num_alternatives - 1);
-	    // Set the sound num to -1 so that the altchng sound is random.
-	    SaberBase::sound_number = -1;
-	  }
-	  RestartHum();
-	}
-	PlayCommon(&SFX_altchng);
-	break;
     }
   }
 
@@ -569,7 +588,15 @@ public:
     }
     beeper.Beep(0.05, 2000.0);
   }
+
+// bool monoFont;      // if true don't announce font labels in the preset menu
+
+
   void SB_NewFont() {
+    #ifdef OSx
+      // if(monoFont) return;      // don't announce font label if there's only one active font
+      // if (SaberBase::monoFont) return;
+    #endif // OSx
     if (!PlayPolyphonic(&SFX_font)) {
       beeper.Beep(0.05, 2000.0);
     }
@@ -680,7 +707,7 @@ public:
       // Polyphonic case
       lock_player_->set_fade_time(0.3);
       if (end) { // polyphonic end lock
-        if (PlayPolyphonic(lock_player_->current_file_id().GetFollowing(end))) {
+        if (PlayPolyphonic(end)) {
           // if playing an end lock fade the lockup faster
           lock_player_->set_fade_time(0.003);
         }
@@ -765,7 +792,11 @@ public:
 	  !GetWavPlayerPlaying(&SFX_poweroff) &&
 	  !GetWavPlayerPlaying(&SFX_pwroff)) {
 	check_postoff_ = false;
+  #ifdef OSx
+    PlayCommon(&SFX_pstoff);    // Need manual play, we broke the link with 'in' so we can turn it off for the preset menu
+  #endif
 	SaberBase::DoEffect(EFFECT_POSTOFF, 0);
+  STDOUT.println("Do postoff");
       }
     }
   }
@@ -783,7 +814,14 @@ public:
   }
 
   void SB_LowBatt() {
-    ProffieOSErrors::low_battery();
+    // play the fonts low battery sound if it exists
+    if (SFX_lowbatt) {
+      PlayCommon(&SFX_lowbatt);
+    } else {
+#ifdef ENABLE_AUDIO
+      talkie.Say(talkie_low_battery_15, 15);
+#endif
+    }
   }
 
  private:

@@ -1,19 +1,16 @@
 #ifndef COMMON_I2CBUS_H
 #define COMMON_I2CBUS_H
 
-#ifdef ESP32
-#include "Wire.h"
-#endif
-
 #define I2C_TIMEOUT_MILLIS 300
 
 class I2CBus : Looper, StateMachine {
 public:
   const char* name() override { return "I2CBus"; }
-
   void Loop() {
     STATE_MACHINE_BEGIN();
+    //#ifndef OSx
     SLEEP(1000);
+    //#endif
 #ifdef TEENSYDUINO
     // Check that we have pullups.
     while (true) {
@@ -43,7 +40,7 @@ public:
 	SLEEP(100); // Try again soon
       } else {
 	if (!clock_detected)
-	  Serial.println("No I2C clock pullup detected.");
+	  STDOUT.println("No I2C clock pullup detected.");
 	SLEEP(1000); // Try again later
       }
     }
@@ -51,23 +48,22 @@ public:
     STDOUT.println("I2C pullups found, initializing...");
     Wire.begin();
     Wire.setClock(400000);
-#ifndef USE_TEENSY4
     Wire.setDefaultTimeout(I2C_TIMEOUT_MILLIS * 1000);
-#endif
     i2c_detected_ = true;
     Looper::Unlink();
 #else
-#ifdef ESP32
-    Wire.setPins(i2cDataPin, i2cClockPin);
-#endif    
     while (true) {
+      #ifndef OSx
       STDOUT.println("I2C init..");
+      #endif
       Wire.begin();
       Wire.setClock(400000);
       i2c_detected_ = true;
       while (used()) YIELD();
       i2c_detected_ = false;
+      #ifndef OSx
       STDOUT.println("I2C sleeping..");
+      #endif
       Wire.end();
       while (!used()) YIELD();
       }

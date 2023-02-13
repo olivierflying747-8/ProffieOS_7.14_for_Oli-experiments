@@ -1,6 +1,8 @@
 #ifndef COMMON_COLOR_H
 #define COMMON_COLOR_H
 
+#include <algorithm>
+
 // Used to represent a color. Uses normal 8-bit-per channel RGB.
 // Note that these colors are in linear space and their interpretation
 // depends on the blade.
@@ -237,6 +239,7 @@ class Color16 {
 		    __UQADD16(g, n) >> 8,
 		    __UQADD16(b, n) >> 8);
     }
+
 #else
     return Color8(clampi32((r+n) >> 8, 0, 255),
                   clampi32((g+n) >> 8, 0, 255),

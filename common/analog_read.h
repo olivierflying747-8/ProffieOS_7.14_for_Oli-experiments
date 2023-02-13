@@ -26,9 +26,13 @@ public:
     if (charge_time < 0.0) {
       charge_time = 500e-9; // default is 500 ns.
       if (channel == ADC_CHANNEL_ADC1_TS)
-	charge_time = 5e-6; // 5 us
+        charge_time = 5e-6; // 5 us
       else if (channel == ADC_CHANNEL_ADC1_VBAT)
-	charge_time = 12e-6; // 12 us
+        charge_time = 12e-6; // 12 us
+      #ifdef ULTRA_PROFFIE
+            else if (channel == ADC_CHANNEL_ADC1_VREFINT)
+        charge_time = 12e-6;   // charge_time = 12e-6;  
+      #endif
     }
     float cycles = charge_time * SystemCoreClock;
     if (cycles <= 2.5) adc_smp_ = ADC_SAMPLE_TIME_2_5;
@@ -69,7 +73,11 @@ public:
   }
 
   int Value() const {
+  #ifndef OSx
     return value_ >> 2;
+  #else 
+    return value_;
+  #endif
   }
 
   void loop() {
@@ -81,6 +89,9 @@ public:
     stm32l4_adc_enable(&stm32l4_adc, 0,NULL, NULL, 0);
     stm32l4_adc.state = ADC_STATE_BUSY;
 
+#ifdef ULTRA_PROFFIE
+    if(g_APinDescription[pin_].adc_input != ADC_CHANNEL_ADC1_VBAT && g_APinDescription[pin_].adc_input != ADC_CHANNEL_ADC1_VREFINT)
+#endif
     {
       // pullup/pulldown does NOT WORK
       uint32_t mode = GPIO_MODE_ANALOG | GPIO_ANALOG_SWITCH;

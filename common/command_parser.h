@@ -38,8 +38,15 @@ public:
     }
     return false;
   }
+  static void DoHelp() {
+    CHECK_LL(CommandParser, parsers, next_parser_);
+    for (CommandParser *p = parsers; p; p = p->next_parser_) {
+      p->Help();
+    }
+  }
 protected:
   virtual bool Parse(const char* cmd, const char* arg) = 0;
+  virtual void Help() = 0;
 private:
   CommandParser* next_parser_;
 };
@@ -56,22 +63,6 @@ int RunCommandAndGetSingleLine(const char* cmd, const char* arg,
   stdout_output = saved_output;
   return output_helper.num_lines();
 }
-
-// Returns true if a line was found.
-// To get the first line, call with previous == nullptr.
-template<size_t MAXLINE>
-bool RunCommandAndFindNextSortedLine(const char* cmd, const char* arg,
-				     const char* previous,
-				     char* output,
-				     bool reverse) {
-  GetNextLineCommandOutput<MAXLINE> output_helper(previous, output, reverse);
-  Print* saved_output = stdout_output;
-  stdout_output = &output_helper;
-  CommandParser::DoParse(cmd, arg);
-  stdout_output = saved_output;
-  return output_helper.found();
-}
-
 
 #endif
 

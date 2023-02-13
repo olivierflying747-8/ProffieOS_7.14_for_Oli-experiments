@@ -25,7 +25,9 @@ public:
   void SetStyle(BladeStyle* style) override { blade_->SetStyle(style); }
   BladeStyle* UnSetStyle() override { return blade_->UnSetStyle(); }
   BladeStyle* current_style() const  override { return blade_->current_style(); }
-  
+  #if defined(OSx) && !defined(OLDPROFILE)
+      StyleHeart StylesAccepted() override { return StyleHeart::_4nothing; }     // flags indicating the type of styles needed for this blade 
+  #endif // OSx
 
   BladeBase* blade_;
 };
