@@ -3,7 +3,6 @@
 
 
 #ifdef CONFIG_TOP
-#include "board_config.h"
 #define NUM_BLADES 2
 #define NUM_BUTTONS 2
 #define VOLUME 3000	// 3000
@@ -15,6 +14,7 @@ const unsigned int maxLedsPerStrip = 144;
 #define ENABLE_SD
 #define SAVE_STATE
 #define ENABLE_ALL_EDIT_OPTIONS
+#include "board_config.h"
 #endif
 
 
