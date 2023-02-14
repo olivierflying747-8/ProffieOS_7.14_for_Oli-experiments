@@ -898,57 +898,6 @@ class Commands : public CommandParser {
 
     
 #ifndef OSx 
-  #ifndef DISABLE_DIAGNOSTIC_COMMANDS
-    if (!strcmp(cmd, "renamePath") && e) {
-      STDOUT.println("rename path");
-      { 
-        char *String = (char*)e;
-        char pathFrom[128];
-        char pathTo[128];
-        char *token;
-        for(uint8_t i=0; i<128;i++)
-        {
-            pathFrom[i] = 0;
-            pathTo[i] = 0;
-        }
-        LOCK_SD(true);
-        token = strtok(String, " ");
-        uint8_t i = 0;
-        while( token != NULL ) {
-          if(!i) {
-            sprintf(pathFrom, "%s", token);
-            STDOUT.print("PATH FROM "); STDOUT.println(pathFrom);
-            i++;
-          } else {
-            sprintf(pathTo, "%s", token);
-            STDOUT.print("PATH TO "); STDOUT.println(pathTo);
-            i++;
-            break;
-          }
-          token = strtok(NULL, " ");
-        }
-        if(i == 2) {
-          STDOUT.print("SUCCESS PArSiNG");
-          STDOUT.print("Renaming ");
-          STDOUT.print("from ");
-          STDOUT.print(pathFrom);
-          STDOUT.print(" to ");
-          STDOUT.println(pathTo);
-          if(LSFS::Exists(pathFrom)) {
-            STDOUT.print("Renaming result = "); STDOUT.println(LSFS::RenamePath(pathFrom, pathTo));
-          } else {
-              STDOUT.print("Path not exist");
-          }
-
-        }
-        LOCK_SD(false);
-
-      }
-
-      return true;
-    }   
-    #endif // DISABLE_DIAGNOSTIC_COMMANDS
-
     #if defined(ENABLE_SD) && defined(ENABLE_SERIALFLASH)
         if (!strcmp(cmd, "cache")) {
           LOCK_SD(true);
@@ -1321,6 +1270,58 @@ class Commands : public CommandParser {
 
 
 #else // OSx  
+
+  #ifndef DISABLE_DIAGNOSTIC_COMMANDS
+    if (!strcmp(cmd, "renamePath") && e) {
+      STDOUT.println("rename path");
+      { 
+        char *String = (char*)e;
+        char pathFrom[128];
+        char pathTo[128];
+        char *token;
+        for(uint8_t i=0; i<128;i++)
+        {
+            pathFrom[i] = 0;
+            pathTo[i] = 0;
+        }
+        LOCK_SD(true);
+        token = strtok(String, " ");
+        uint8_t i = 0;
+        while( token != NULL ) {
+          if(!i) {
+            sprintf(pathFrom, "%s", token);
+            STDOUT.print("PATH FROM "); STDOUT.println(pathFrom);
+            i++;
+          } else {
+            sprintf(pathTo, "%s", token);
+            STDOUT.print("PATH TO "); STDOUT.println(pathTo);
+            i++;
+            break;
+          }
+          token = strtok(NULL, " ");
+        }
+        if(i == 2) {
+          STDOUT.print("SUCCESS PArSiNG");
+          STDOUT.print("Renaming ");
+          STDOUT.print("from ");
+          STDOUT.print(pathFrom);
+          STDOUT.print(" to ");
+          STDOUT.println(pathTo);
+          if(LSFS::Exists(pathFrom)) {
+            STDOUT.print("Renaming result = "); STDOUT.println(LSFS::RenamePath(pathFrom, pathTo));
+          } else {
+              STDOUT.print("Path not exist");
+          }
+
+        }
+        LOCK_SD(false);
+
+      }
+
+      return true;
+    }   
+  #endif // DISABLE_DIAGNOSTIC_COMMANDS
+
 
   #ifdef ENABLE_DIAGNOSE_COMMANDS
     if (!strcmp(cmd, "cod") && e) {

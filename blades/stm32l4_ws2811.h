@@ -917,6 +917,10 @@ uint8_t* WS2811EngineSTM32L4::half_;
 uint8_t* WS2811EngineSTM32L4::dest_;
 stm32l4_timer_t WS2811EngineSTM32L4::timer_;
 stm32l4_dma_t WS2811EngineSTM32L4::dma_;
+#ifndef ULTRA_PROFFIE
+stm32l4_dma_t WS2811EngineSTM32L4::dma2_;
+stm32l4_dma_t WS2811EngineSTM32L4::dma3_;
+#endif
 volatile uint8_t WS2811EngineSTM32L4::bit_;
 
 
