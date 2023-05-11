@@ -59,16 +59,27 @@ DMAMEM int displayMemory[maxLedsPerStrip * 24 / 4 + 1];
 #endif
 #include "spiled_pin.h"
 
-#include "../common/xPowerManager.h" // TODO remove from here and find a suitable place for it 
+// #include "../common/xPowerManager.h" // TODO remove from here and find a suitable place for it 
 // WS2811-type blade implementation.
 // Note that this class does nothing when first constructed. It only starts
 // interacting with pins and timers after Activate() is called.
-class WS2811_Blade : public AbstractBlade, CommandParser, Looper
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+class WS2811_Blade : public AbstractBlade, CommandParser, Looper, xPowerSubscriber {
+public:
+  void PwrOn_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" pix+ "); 
+    #endif
+  }
+  void PwrOff_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" pix- "); 
+    #endif
+  }
+#else // nOSx
+class WS2811_Blade : public AbstractBlade, CommandParser, Looper {
+#endif // OSx
+
 public:
 WS2811_Blade(WS2811PIN* pin,
              PowerPinInterface* power,
@@ -79,8 +90,8 @@ WS2811_Blade(WS2811PIN* pin,
     poweroff_delay_ms_(poweroff_delay_ms),
     power_(power),
     pin_(pin)
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    ,xPowerManager(xPower_LightString, X_PM_WS_MS, name()) 
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+    , xPowerSubscriber(pwr4_Pixel)
 #endif
     {
     
@@ -90,6 +101,9 @@ WS2811_Blade(WS2811PIN* pin,
   void Power(bool on) {
     if (on) EnableBooster();
     if (!powered_ && on) {
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+      RequestPower();
+#endif      
       if (power_) power_->Init();
       TRACE(BLADE, "Power on");
       pin_->Enable(true);
@@ -285,8 +299,8 @@ protected:
       pin_->EndFrame();
       loop_counter_.Update();
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-      requestPower(); // from Xpower Manager 
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+      RequestPower();
 #endif
 
       if (powered_ && allow_disable_) {
@@ -297,18 +311,6 @@ protected:
     STATE_MACHINE_END();
   }
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xKillPower() override
-    {
-       // TODO DELEte
-      stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_ANALOG | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);  // GPIO_MODE_OUTPUT
-    }
-    void xRestablishPower() override
-    {
-       stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_OUTPUT | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);
-      requestPower(); 
-    }
-#endif
   
 private:
   // Loop should run.

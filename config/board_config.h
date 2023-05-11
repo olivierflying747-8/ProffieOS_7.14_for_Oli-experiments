@@ -141,36 +141,33 @@
         #ifdef TEST_PRAGMA_MSG
             #pragma message ( "OSx  " )
         #endif
-        #define OSX_SUBVERSION       "009"       // Fork version 
-
-        #define X_MOTION_TIMEOUT        60000    // 
-        #define X_POWER_MAN
-        #ifdef X_POWER_MAN
-            #define X_PM_MOTION_MS 10
-            #define X_PM_WS_MS     10000
-            #define X_PM_BOOST_MS  10000
-            #define X_PM_AMP_MS    10000
-            #define X_PM_SER_MS    60000
-            #define X_PM_SSER_MS   300000
-            #define X_PM_SD_MS     10000
-            #define X_PM_PROP_MS   X_MOTION_TIMEOUT // sync it 
-        #endif
+        #define OSX_SUBVERSION       "011"       // Fork version 
         #define OSX_ENABLE_MTP              // enables proffieOSx serial transfer protcol                 
 
         #ifdef ENABLE_DEVELOPER_MODE
             #define ENABLE_DEVELOPER_COMMANDS       // ProffieOS developer commands
             #define X_PROBECPU                      // Enable CPU probes (results reported at STDOUT under "top"). Adds 3k program memory
-            #define X_BROADCAST                      // Enable broadcasting of binary monitoring data. For debug only
-            #ifdef X_BROADCAST
-                #define OBSIDIANFORMAT  // reuse matlabs
+            // #define X_BROADCAST                      // Enable broadcasting of binary monitoring data. For debug only
+            // #ifdef X_BROADCAST
+                // #define OBSIDIANFORMAT  // reuse matlabs
                 // #define BROADCAST_MOTION             // Broadcast acc & gyro
                 // #define BROADCAST_THETA              // Broadcast data for twist navigation
                 // #define BROADCAST_SHAKE             // Broadcast data for shake detection
                 // #define BROADCAST_2TAP             // Broadcast data for double-tap detection
-            #endif
-            #define DIAGNOSE_EVENTS            
-            #define X_LIGHTTEST                       // Enable parsing LED test commands
-            #define X_MENUTEST                      // Enable parsing xMenu commands
+            // #endif
+            // #define X_LIGHTTEST                       // Enable parsing LED test commands
+            // #define X_MENUTEST                      // Enable parsing xMenu commands
+            // #define DIAGNOSE_SENSOR
+            // #define DIAGNOSE_STORAGE
+            // #define DIAGNOSE_AUDIO
+            // #define DIAGNOSE_BLADES
+            // #define DIAGNOSE_BOOT                      
+            // #define DIAGNOSE_EVENTS
+            // #define DIAGNOSE_PRESETS
+            #define DIAGNOSE_PROP        
+            #define DIAGNOSE_POWER
+
+
         #endif
 
         #ifdef PF_STATUS_REPORT_ON
@@ -179,11 +176,11 @@
             #define DIAGNOSE_STORAGE
             #define DIAGNOSE_AUDIO
             #define DIAGNOSE_BLADES
-            #define DIAGNOSE_POWER
             #define DIAGNOSE_BOOT                      
             // #define DIAGNOSE_EVENTS
             #define DIAGNOSE_PRESETS
             #define DIAGNOSE_PROP        
+            // #define DIAGNOSE_POWER
         #endif
 
     #else 
@@ -277,7 +274,7 @@
         #ifdef TEST_PRAGMA_MSG
             #pragma message ( "OSx  " )
         #endif
-        #define OSX_SUBVERSION       "009"       // Fork version 
+        #define OSX_SUBVERSION       "011"       // Fork version 
         
         // #define INSTALL_FILE "_osx_/testled.cod"    // installation file
         // #define LEDLIB_FILE "_osx_/ledlib.cod"    // LED library file
@@ -289,18 +286,8 @@
         #define PF_VOICE_MSG_DISABLED       // talkie : 0- VOICE MSG DISABLED
                                             //          1- VOICE MSG FEMALE 
                                             //          2- VOICE MSG MALE
-        #define X_MOTION_TIMEOUT        60000
-        // #define X_POWER_MAN
-        #ifdef X_POWER_MAN
-            #define X_PM_MOTION_MS 10
-            #define X_PM_WS_MS     10000
-            #define X_PM_BOOST_MS  10000
-            #define X_PM_AMP_MS    10000
-            #define X_PM_SER_MS    60000
-            #define x_PM_SSER_MS   300000
-            #define X_PM_SD_MS     10000
-            #define X_PM_PROP_MS   X_MOTION_TIMEOUT // sync it 
-        #endif
+
+
 
         #define OSX_ENABLE_MTP              // enables proffieOSx serial transfer protcol   
 		    #ifdef OSX_ENABLE_MTP
@@ -312,6 +299,7 @@
             #define DIAGNOSE_EVENTS            
             #define X_PROBECPU                      // Enable CPU probes (results reported at STDOUT under "top"). Adds 3k program memory
             //#define X_BROADCAST                      // Enable broadcasting of binary monitoring data. For debug only
+            #define DIAGNOSE_POWER        
             #ifdef X_BROADCAST
                 // #define OBSIDIANFORMAT  // reuse matlabs
                 // #define BROADCAST_MOTION             // Broadcast acc & gyro
@@ -328,7 +316,7 @@
             #define DIAGNOSE_STORAGE
             // #define DIAGNOSE_EVENTS
             #define DIAGNOSE_AUDIO
-            #define DIAGNOSE_POWER        
+            // #define DIAGNOSE_POWER        
             #define DIAGNOSE_BOOT                      // Enable developer stream on serial port
         #endif
 

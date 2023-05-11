@@ -46,12 +46,78 @@ public:
     // TODO: Change ADC clock if 640.5 cycles is not enough.
   }
 
+
+bool x_stm32l4_adc_timeout(uint32_t time, uint32_t waitms)
+{ 
+  if(millis() - time > waitms)
+    return true;
+  return false;
+}
+
+bool X_stm32l4_adc_calibrate(stm32l4_adc_t *adc)
+{
+    ADC_TypeDef *ADCx = adc->ADCx;
+
+    uint32_t timeStart;
+
+    if (adc->state != ADC_STATE_READY)
+    {
+	    return false;
+    }
+
+    ADCx->CR |= ADC_CR_ADDIS;
+
+    timeStart = millis();
+    while (ADCx->CR & ADC_CR_ADEN)
+    {
+      if(x_stm32l4_adc_timeout(timeStart, 5))   // wait max 5 ms , should enable in us
+        return false;
+    }
+
+    armv7m_core_udelay(1);
+    /* Single-Ended Input Calibration */
+    ADCx->CR &= ~ADC_CR_ADCALDIF;
+    ADCx->CR |= ADC_CR_ADCAL;
+    
+    timeStart = millis();
+    while (ADCx->CR & ADC_CR_ADCAL)
+    {
+      if(x_stm32l4_adc_timeout(timeStart, 5))  // wait max 5 ms , should enable in us
+        break;
+    }
+
+    /* Differential Input Calibration */
+    ADCx->CR |= (ADC_CR_ADCALDIF | ADC_CR_ADCAL);
+    
+    timeStart = millis();
+    while (ADCx->CR & ADC_CR_ADCAL)
+    {
+      if(x_stm32l4_adc_timeout(timeStart, 5))  // wait max 5 ms , should enable in us
+        break;
+    }
+
+    armv7m_core_udelay(100);
+
+    ADCx->ISR = ADC_ISR_ADRDY;
+
+    timeStart = millis();
+    do
+    {
+	    ADCx->CR |= ADC_CR_ADEN;
+      if(x_stm32l4_adc_timeout(timeStart, 5))  // wait max 5 ms , should enable in us
+        return false;
+    }
+    while (!(ADCx->ISR & ADC_ISR_ADRDY));
+
+    return true;
+}
   
   bool Start() {
     if (stm32l4_adc.state == ADC_STATE_NONE) {
       stm32l4_adc_create(&stm32l4_adc, ADC_INSTANCE_ADC1, STM32L4_ADC_IRQ_PRIORITY, 0);
       stm32l4_adc_enable(&stm32l4_adc, 0, NULL, NULL, 0);
-      stm32l4_adc_calibrate(&stm32l4_adc);
+      //stm32l4_adc_calibrate(&stm32l4_adc);
+      X_stm32l4_adc_calibrate(&stm32l4_adc);
       stm32l4_adc_disable(&stm32l4_adc);
     }
     if (stm32l4_adc.state != ADC_STATE_INIT)

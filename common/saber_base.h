@@ -6,6 +6,10 @@
   
 #ifdef OSx
 #include "battery_monitor.h"
+  #ifdef ULTRA_PROFFIE
+    void EnableMotion();    // defined in ProffieOS.ino
+    void DisableMotion();
+  #endif
 #endif 
 // SaberBase is our main class for distributing saber-related events, such
 // as on/off/clash/etc. to where they need to go. Each SABERFUN below
@@ -119,50 +123,64 @@ public:
 
   static bool IsOn() { return on_; }
   #ifndef OSx
-  static void TurnOn() {
-    on_ = true;
-    SaberBase::DoOn();
-  }
+    static void TurnOn() {
+      on_ = true;
+      SaberBase::DoOn();
+    }
   #else // OSx
-  static void TurnOn(bool silent=false) {
-    on_ = true;
-    battery_monitor.SetLoad(true);
-    if (silent) SaberBase::DoSilentOn();
-    else SaberBase::DoOn();
-  }
+    static void TurnOn(bool silent=false) {
+      on_ = true;
+      battery_monitor.SetLoad(true);
+      if (silent) SaberBase::DoSilentOn();
+      else SaberBase::DoOn();
+    }
   #endif // OSx
+
   static void TurnOff(OffType off_type) {
     on_ = false;
     #ifdef OSx
-    battery_monitor.SetLoad(false);
-    #endif
-    last_motion_request_ = millis();
+      battery_monitor.SetLoad(false);
+    #else // nOSx
+      if !defined(ULTRA_PROFFIE)
+        last_motion_request_ = millis();
+    #endif // OSx   
     SaberBase::DoOff(off_type);
   }
 
   static bool MotionRequested() {
-#if NUM_BUTTONS == 0
-    return true;
-#else
-  #ifndef OSx
-    return IsOn() || (millis() - last_motion_request_) < 20000;
-  #else 
-    return IsOn() || (millis() - last_motion_request_) < X_MOTION_TIMEOUT;
-  #endif
-#endif
+    #if NUM_BUTTONS == 0
+        return true;
+    #else // NUM_BUTTONS
+      #if defined(ULTRA_PROFFIE) && defined(OSx)
+          return true;
+      #else // nULTRA_PROFFIE
+        return IsOn() || (millis() - last_motion_request_) < X_MOTION_TIMEOUT;
+      #endif // ULTRA_PROFFIE
+    #endif // NUM_BUTTONS
   }
-  static void RequestMotion() {
+
+  static void RequestMotion()  {
+    #if !defined(ULTRA_PROFFIE) || !defined(OSx)
     last_motion_request_ = millis();
+    #endif
   }
-  #ifdef OSX_ENABLE_MTP
-  static void TimeoutRequestMotion() {
-    last_motion_request_ = 0;
-  }
-  #endif
+
+
+  // #ifdef OSX_ENABLE_MTP
+  // static void TimeoutRequestMotion() {
+  //   #ifdef ULTRA_PROFFIE
+  //     gyroscope->enabled = false;
+  //   #else
+  //     last_motion_request_ = 0;
+  //   #endif
+  // }
+  // #endif
   static void DumpMotionRequest() {
+    #if !defined(ULTRA_PROFFIE) || !defined(OSx) 
     STDOUT << "Motion requested: " << MotionRequested()
 	   << " (millis() - last_motion_request=" << (millis() - last_motion_request_)
 	   << ")\n";
+    #endif
   }
 
   enum LockupType {
@@ -342,7 +360,9 @@ public:                                                         \
   }
 
   // Not private for debugging purposes only.
-  static uint32_t last_motion_request_;
+  #if !defined(ULTRA_PROFFIE) || !defined(OSx) 
+    static uint32_t last_motion_request_;
+  #endif
 private:
   static bool on_;
   static LockupType lockup_;

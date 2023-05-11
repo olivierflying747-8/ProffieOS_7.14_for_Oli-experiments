@@ -77,7 +77,7 @@ public:
     return ret;
   }
 
- #if defined(ULTRA_PROFFIE) && defined(X_POWER_MAN)
+ #ifdef ULTRA_PROFFIE
       void flushTx()
       {
         Serial.flush();
@@ -89,7 +89,7 @@ public:
             Serial.read();
       }
 
-  #endif
+  #endif // ULTRA_PROFFIE
 
   void Silent(bool newState) {
     if (newState) { // 

@@ -463,7 +463,8 @@ class Serial_Transfer : public Serial_Protocol<SA>, CommandParser,Looper
       }
 
       if(SaberBase::MotionRequested())  // if motion is working
-        SaberBase::TimeoutRequestMotion();
+        // SaberBase::TimeoutRequestMotion();
+      DisableMotion();
 
       return true;
     }
@@ -1179,32 +1180,29 @@ StaticWrapper<Serial_Transfer<SerialAdapter>> mtpUart;
 // Command-line parser. Easiest way to use it is to start the arduino
 // serial monitor.
 template<class SA> /* SA = Serial Adapter */
-class Parser : Looper, StateMachine 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+class Parser : Looper, StateMachine, xPowerSubscriber {
 public:
-  Parser() : Looper() 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
-  , xPowerManager(xPower_CPU, X_PM_SER_MS, name())
-#endif
-  {}
+  Parser() : Looper(), xPowerSubscriber(pwr4_CPU) {}
+#else // nOSx
+class Parser : Looper, StateMachine, xPowerSubscriber {
+public:
+  Parser() : Looper() {}
+#endif // OSx
+
   const char* name() override { return "Parser"; }
 
   void Setup() override {
     SA::begin();
   }
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xRestablishPower() override
-    {
-      requestPower();
-      setSHTime(X_PM_SER_MS); 
-    }
-#endif
 
   void Loop() override {
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+    // uint32_t CPUtimeout = 300000;   // Exceptional power timeout for serial parser
+    uint32_t CPUtimeout = 10000;   // Exceptional power timeout for serial parser
+#endif
+
     STATE_MACHINE_BEGIN();
     while (true) {
       while (!SA::Connected()) YIELD();
@@ -1216,9 +1214,8 @@ public:
 
       while (SA::Connected()) {
         while (!SA::stream().available()) YIELD();
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-      requestPower(); // from Xpower Manager 
-      if(!SaberBase::IsOn()) setSHTime(X_PM_SSER_MS); 
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+      RequestPower(&CPUtimeout);   // Increase CPU timeout to 5 minutes if parser is active (defaults to 1 minute)
 #endif
 
 #ifdef OSX_ENABLE_MTP

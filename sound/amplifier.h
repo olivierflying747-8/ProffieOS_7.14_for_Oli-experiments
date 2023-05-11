@@ -14,18 +14,10 @@ bool sgtl5000_enabled = false;
 
 // Turns off amplifier when no audio is played.
 // Maybe name this IdleHelper or something instead??
-class Amplifier : Looper, StateMachine, CommandParser
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
+class Amplifier : Looper, StateMachine, CommandParser {
 public:
-  Amplifier() : Looper(), CommandParser() 
-  #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-   , xPowerManager(xPower_Audio, X_PM_AMP_MS, name())
-  #endif
-  {}
+  Amplifier() : Looper(), CommandParser() {}
+
   const char* name() override { return "Amplifier"; }
 
   bool Active() {
@@ -42,7 +34,7 @@ public:
   }
 
   void Enable() {
-    dac.begin();
+    // dac.begin();
     last_enabled_ = millis();
 #ifdef AUDIO_CONTROL_SGTL5000
     if (!sgtl5000_enabled) {
@@ -54,15 +46,15 @@ public:
     if (!on_) {
       on_ = true;
       EnableBooster();
-      pinMode(amplifierPin, OUTPUT);
-      digitalWrite(amplifierPin, HIGH);
-      delay(10); // Give it a little time to wake up.
-      #ifdef ULTRA_PROFFIE
-         stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_OUTPUT | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);
-      //   digitalWrite(16, LOW);
-      //   delay(500); // Give it a little time to wake up.
-      #endif
+      // pinMode(amplifierPin, OUTPUT);
+      // digitalWrite(amplifierPin, HIGH);
       // delay(10); // Give it a little time to wake up.
+      // #ifdef ULTRA_PROFFIE
+      //    stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_OUTPUT | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);
+      // //   digitalWrite(16, LOW);
+      // //   delay(500); // Give it a little time to wake up.
+      // #endif
+      // // delay(10); // Give it a little time to wake up.
     }
 #endif    
   }
@@ -71,7 +63,7 @@ protected:
   void Setup() override {
     // Audio setup
 #ifndef AUDIO_CONTROL_SGTL5000
-    pinMode(amplifierPin, OUTPUT);
+    // pinMode(amplifierPin, OUTPUT);
 #endif    
     SetupStandardAudio();
     last_enabled_ = millis();
@@ -82,9 +74,7 @@ protected:
     while (true) {
       while (Active())
       {
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-        requestPower();
-        #endif
+
        YIELD();
       }
 
@@ -103,13 +93,13 @@ protected:
       // sgtl5000_1.disable();
       // sgtl5000_enabled = false;
 #else
-  #ifndef ULTRA_PROFFIE
-      pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
-  #else 
-      digitalWrite(amplifierPin, LOW); // turn the amplifier off
-      // TODO DELEte
-      //stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_ANALOG | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);  // GPIO_MODE_OUTPUT
-  #endif
+  // #ifndef ULTRA_PROFFIE
+  //     pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
+  // #else 
+  //     digitalWrite(amplifierPin, LOW); // turn the amplifier off
+  //     // TODO DELEte
+  //     //stm32l4_gpio_pin_configure(GPIO_PIN_PB2, GPIO_MODE_ANALOG | GPIO_OTYPE_PUSHPULL | GPIO_OSPEED_LOW | GPIO_PUPD_PULLDOWN);  // GPIO_MODE_OUTPUT
+  // #endif
 #endif      
       SLEEP(20);
       if (on_) continue;
@@ -119,16 +109,6 @@ protected:
     STATE_MACHINE_END();
   }
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xKillPower() override
-    {
-      digitalWrite(amplifierPin, LOW); // turn the amplifier off
-    }
-    void xRestablishPower() override
-    {
-      requestPower(); 
-    }
-#endif
 
   bool Parse(const char *cmd, const char* arg) override {
     if (!strcmp(cmd, "amp")) {
@@ -141,11 +121,11 @@ protected:
 	sgtl5000_1.volume(0.0);
 	sgtl5000_1.disable();
 #else
-  #ifndef ULTRA_PROFFIE
-      pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
-  #else 
-      digitalWrite(amplifierPin, LOW); // turn the amplifier off
-  #endif
+  // #ifndef ULTRA_PROFFIE
+  //     pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
+  // #else 
+  //     digitalWrite(amplifierPin, LOW); // turn the amplifier off
+  // #endif
 #endif      
         return true;
       }
@@ -191,27 +171,28 @@ private:
 
 Amplifier amplifier;
 
-void EnableAmplifier() {
-  amplifier.Enable();
-}
+// void EnableAmplifier() {
+  // amplifier.Enable();
+//   dynamic_mixer.RequestPower();
+// }
 bool AmplifierIsActive() {
   return amplifier.Active();
 }
 #ifdef ULTRA_PROFFIE
 void SilentEnableAmplifier(bool on) {
-  if(on)
-        digitalWrite(amplifierPin, HIGH); // turn the amplifier off
-  else 
-        digitalWrite(amplifierPin, LOW); // turn the amplifier off
+  // if(on)
+  //       digitalWrite(amplifierPin, HIGH); // turn the amplifier off
+  // else 
+  //       digitalWrite(amplifierPin, LOW); // turn the amplifier off
 }
 #endif
 
-#else
+#else // ENABLE_AUDIO
 void EnableAmplifier() { }
 bool AmplifierIsActive() { return false; }
 #ifdef ULTRA_PROFFIE
 void SilentEnableAmplifier(bool on) { }
 #endif
 
-#endif   // enable audio
+#endif   // ENABLE_AUDIO
 #endif

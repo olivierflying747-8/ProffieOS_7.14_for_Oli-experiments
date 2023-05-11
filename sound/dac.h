@@ -107,9 +107,33 @@ uint32_t timPeriphClock;
 
 #endif
 
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+bool SoundActive();         // defined later in sound.h
+void SetupStandardAudio();  // defined later in sound.h
+class LS_DAC : CommandParser, Looper, public xPowerSubscriber {
+public:
+  LS_DAC() : CommandParser(), Looper(), xPowerSubscriber(pwr4_Booster | pwr4_Amplif) {}
+  void PwrOn_Callback() override  { 
+    begin();      // setup and start peripheral
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" dac+ ");  
+    #endif
+  }         
+  void PwrOff_Callback() override { 
+    end();      // de-init peripheral
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" dac- "); 
+    #endif
+  }     
+  void Loop() override { if (SoundActive()) RequestPower(); }
+
+#else // nOSx
 class LS_DAC : CommandParser, Looper {
 public:
-  virtual void Loop() override {}
+  void Loop() override {}
+#endif // OSx
+
   virtual const char* name() { return "DAC"; }
   void Setup() override {
     if (!needs_setup_) return;
@@ -322,6 +346,10 @@ public:
   #endif // end else  USE_DAC
 
 #endif // end else TEENSYDUINO
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+    SetupStandardAudio();   // was in amplifier.Setup()
+#endif
 
   }
 
@@ -729,5 +757,6 @@ Filter::Biquad<
 #endif  
 
 LS_DAC dac;
+
 
 #endif

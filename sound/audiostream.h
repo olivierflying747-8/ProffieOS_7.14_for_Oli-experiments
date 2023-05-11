@@ -10,6 +10,8 @@ public:
   virtual bool eof() const { return false; }
   // Stop
   virtual void Stop() {}
+
+  
 };
 
 #endif

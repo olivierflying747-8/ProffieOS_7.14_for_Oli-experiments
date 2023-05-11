@@ -9,14 +9,24 @@
   #define NUM_WAV_PLAYERS 8
 #endif
 
+
+#include "talkie.h"
+
 #include "click_avoider_lin.h"
 #include "waveform_sampler.h"
 #include "audiostream.h"
+#include "../common/xPowerManager.h" // need this before dynamic_mixer, but moving upwards will cause the linker to fail, so we'll just keep it messy like everything else
+
 #include "dynamic_mixer.h"
 #include "dac.h"
 #include "beeper.h"
-#include "talkie.h"
+
+
+
+
+
 #include "lightsaber_synth.h"
+
 
 Beeper beeper;
 Talkie talkie;
@@ -100,7 +110,28 @@ uint8_t GetNrOFPlayingPlayers(bool excludeTrack = false)
 
   return nrPlaying;
 }
-#endif
+#ifdef ULTRA_PROFFIE
+  inline void EnableAmplifier() { dac.RequestPower(); }
+
+  bool SoundActive() {
+    if (!dynamic_mixer.get_volume()) return false;    // muted
+    for (size_t i = 0; i < NELEM(wav_players); i++)
+      if (wav_players[i].isPlaying())
+        return true;
+    if (beeper.isPlaying()) return true;
+    if (talkie.isPlaying()) return true;
+    return false;
+  } 
+  const auto AmplifierIsActive = SoundActive;   
+
+  // Stubs (for backward compatibility only)
+  void EnableBooster() {}
+  void SilentEnableBooster(bool on) {}
+  void SilentEnableAmplifier(bool on) {}
+
+#endif // ULTRA_PROFFIE
+
+#endif // OSx
 
 #include "../common/config_file.h"
 #include "hybrid_font.h"

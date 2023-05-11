@@ -8,9 +8,9 @@ public:
   const char* name() override { return "I2CBus"; }
   void Loop() {
     STATE_MACHINE_BEGIN();
-    //#ifndef OSx
+    #ifndef OSx
     SLEEP(1000);
-    //#endif
+    #endif
 #ifdef TEENSYDUINO
     // Check that we have pullups.
     while (true) {
@@ -72,8 +72,17 @@ public:
   }
 
   bool used() {
+	#ifdef OSx
+    return !((last_request_millis_ + shtimeMS - millis()) >> 31);
+	#endif
     return !((last_request_millis_ + 2000 - millis()) >> 31);
   }
+
+#ifdef OSx
+  void scheduledDeinitTime(uint32_t ms) {
+    shtimeMS = ms;
+  }
+#endif
 
   bool inited() {
     last_request_millis_ = millis();
@@ -95,6 +104,9 @@ private:
   int i;
   bool clock_detected, data_detected;
   bool i2c_detected_ = false;
+  #ifdef OSx
+  uint32_t shtimeMS = 2000;
+  #endif
 };
 
 #endif

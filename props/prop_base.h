@@ -120,85 +120,36 @@ struct SoundToPlay {
       int sounds_;
       SoundToPlay queue_[QueueLength];
     };
-// #else // OSx
-//     struct SoundToPlay {
-//       const char* filename_;
-//       Effect* effect_;
-//       int selection_;
-// private:
-//       static const char* common_dir_;   // directory (set once for all)
-//       static const char* common_ext_;   // file extension (set once for all)
-// public:
-    
-
-//       SoundToPlay() :filename_(nullptr), effect_(nullptr) {}
-//       explicit SoundToPlay(const char* file) : filename_(file){  }
-//       SoundToPlay(Effect* effect, int selection = -1) : filename_(nullptr), effect_(effect), selection_(selection) {}
-
-//       // play file in global current_directory
-//       bool Play(BufferedWavPlayer* player) {
-//         if (filename_) return player->PlayInCurrentDir(filename_);
-//         effect_->Select(selection_);
-//         player->PlayOnce(effect_);
-//         return true;
-//       }
-
-//         // play file in local common directory
-//         bool PlayInDir(BufferedWavPlayer* player) {
-//         if (!filename_) return false;
-//         return player->PlayInDir(common_dir_, filename_, common_ext_); // bootstrap current_directory
-//         }
-
-//       bool isSet() {
-//           return filename_ != nullptr || effect_ != nullptr;
-//       }
-//     };
-
-//     template<int QueueLength, int QueueChannels=1>
-//     class SoundQueue {
-//     public:
-
-//       bool Play(SoundToPlay p) {
-//         if (sounds_ < QueueLength) {
-//           queue_[sounds_++] = p;
-//           return true;
-//         }
-//         return false;
-//       }
-
-//       bool Play(const char* p) {
-//         return Play(SoundToPlay(p));
-//       }
-//       // Called from Loop()
-//       void PollSoundQueue(RefPtr<BufferedWavPlayer>& player) {
-//         if (sounds_ &&  (!player || !player->isPlaying())) {
-//           if (!player) {
-//             player = GetFreeWavPlayer();
-//             if (!player) return;
-//             player->set_volume_now(1.0f);
-//           }
-//           queue_[0].Play(player.get());
-//           sounds_--;
-//           for (int i = 0; i < sounds_; i++) queue_[i] = queue_[i+1];
-//         }
-//       }
-//     private:
-//       int sounds_;
-//       SoundToPlay queue_[QueueLength];
-
-//     };
-// #endif // OSx
-
-
 
 // Base class for props.
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+class PropBase : CommandParser, Looper, public xPowerSubscriber, protected SaberBase {
+public:
+void PwrOn_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" cpu+ "); 
+    #endif
+  }
+  void PwrOff_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" cpu- "); 
+    #endif
+  }
+#else  // nULTRA_PROFFIE
 class PropBase : CommandParser, Looper, protected SaberBase {
+#endif // ULTRA_PROFFIE
+
 public: 
 #ifndef OSx
   PropBase() : CommandParser() {}
 #else // OSx
   xMenu<uint16_t>* menu;    // if a menu is assigned to prop, events will be redirected to menu.Event()
-  PropBase() : CommandParser() { menu=0; accResultant = 0;}
+  #ifdef ULTRA_PROFFIE
+    PropBase() : CommandParser(), Looper(), xPowerSubscriber(pwr4_CPU) { menu=0; accResultant = 0;}
+  #else // nULTRA_PROFFIE
+    xMenu<uint16_t>* menu;    // if a menu is assigned to prop, events will be redirected to menu.Event()
+    PropBase() : CommandParser() { menu=0; accResultant = 0;}
+  #endif // ULTRA_PROFFIE
 #endif // OSx
 
   BladeStyle* current_style() {
@@ -218,13 +169,22 @@ public:
     #endif // OSx
       }
 
-
+#if defined(ULTRA_PROFFIE) && defined(OSx)
+  bool HoldPower() override {  // Return true to pause power subscriber timeout
+    if (IsOn()) return true;
+    if (current_style() && current_style()->NoOnOff()) return true;
+    return false;
+  }
+  inline bool NeedsPower() { return HoldPower(); }
+#else // nULTRA_PROFFIE
   bool NeedsPower() {
     if (SaberBase::IsOn()) return true;
     if (current_style() && current_style()->NoOnOff())
       return true;
     return false;
   }
+#endif // ULTRA_PROFFIE
+
 
   int32_t muted_volume_ = 0;
   bool SetMute(bool muted) {
@@ -2837,6 +2797,12 @@ protected: // was private:
     if (IsOn()) return false;
     if (current_style() && current_style()->NoOnOff())
       return false;
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+    RequestPower();     // get power for CPU
+    EnableMotion();
+#endif
+
     activated_ = millis();
     #ifndef OSx
       STDOUT.println("Ignition.");

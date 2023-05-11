@@ -49,11 +49,7 @@ Enter/Exit Color Change - 1 button saber = Hold button and Twist.
 // The Saber class implements the basic states and actions
 // for the saber.
 class Ultrasaber : public PROP_INHERIT_PREFIX PropBase 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
 {
-#endif
 private:
     RefPtr<BufferedWavPlayer> player;  // tra..la...la
 public:
@@ -89,10 +85,6 @@ public:
     }
 
   Ultrasaber() : PropBase() 
-  #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
-    // ,xPowerManager(xPower_CPU, 10000, name())  // 10 seconds
-    ,xPowerManager(xPower_CPU, X_PM_PROP_MS, name()) // 2 minutes
-  #endif
   {    
     lastRecordedEvent = millis();
     myMenuActions = 0;
@@ -571,37 +563,35 @@ public:
     return false;
   }
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xRestablishPower() override
-    {
-      requestPower(); 
-    }
-#endif
 
   void Loop() override {
     // bool playerDestroyer;
     #ifdef OSX_ENABLE_MTP
-      if(!mtpUart->GetSession()) {    // if media transfer file is active , no prop is running  
+      if(mtpUart->GetSession()) return;    // if media transfer file is active , no prop is running  
     #endif
-        PropBase::Loop();   // run the prop loop
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-        if(!IsOn()) // if saber is turned off  SaberBase::IsOn()
-        {
-          if(millis() - lastRecordedEvent < 1000 || menu) // request motion and power to make sure acc is active 
-          {
-            requestPower();
-            SaberBase::RequestMotion();
-          }
-          if(SaberBase::MotionRequested())   // try to detect twist move only if acc is running 
-          {
-            DetectTwist();
-  		      DetectShake();              // run shake detection 
-            Detect2Tap(accResultant);               // run double-tap detection 
-          }
-        } 
-        else {  // saber is on  
-          requestPower();   // always request power to make sure stop modde condition will be not achieved 
-        #endif  
+    
+        PropBase::Loop();   // run the prop loop     
+        #ifdef ULTRA_PROFFIE
+          if (menu) RequestPower();
+        #endif
+
+    // #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
+    //     if(!IsOn()) // if saber is turned off  
+    //     {
+    //       if(millis() - lastRecordedEvent < 1000 || menu) // request motion and power to make sure acc is active 
+    //       {
+    //         SaberBase::RequestMotion();
+    //       }
+    //       if(SaberBase::MotionRequested())   // try to detect twist move only if acc is running 
+    //       {
+    //         DetectTwist();
+  	// 	      DetectShake();              // run shake detection 
+    //         Detect2Tap(accResultant);               // run double-tap detection 
+    //       }
+    //     } 
+    //     else {  // saber is on  
+    //     //   requestPower();   // always request power to make sure stop modde condition will be not achieved 
+    // #endif 
           SaberBase::RequestMotion(); // request motion 
 		      Detect2Tap(accResultant);               // run double-tap detection 
           DetectTwist();              // run twist detection  
@@ -636,9 +626,9 @@ public:
             }            
           }
 
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
-        }
-        #endif   
+        // #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
+        // }
+        // #endif   
         if (PlayerDestroyer()) {    // just ended a sound and freed the prop player
             if(restoreSettingsLOWBAT) {  // restore volume after a failed attempt to power on; LowBat sound just ended.
               restoreSettingsLOWBAT = false;    // set by CheckCanStart
@@ -655,9 +645,6 @@ public:
         MenuLoop();       // create/destroy menu actions
         StealthLoop();   // sweep volume and brightness if needed        
 
-    #ifdef OSX_ENABLE_MTP
-    }
-    #endif
 
   }
   /*  @brief  :

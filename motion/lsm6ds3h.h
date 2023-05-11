@@ -2,13 +2,50 @@
 #define MOTION_LSM6DS3H_H
 
 // Supports LSM6DS3, LSM6DSM and LSM6DSO
-class LSM6DS3H : public I2CDevice, Looper, StateMachine 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
-public:
+#if defined(ULTRA_PROFFIE) && defined(OSx)
+  // Subscribes to power domain CPU but does not request power, will stay alive as long as the CPU is alive
+  class LSM6DS3H : public I2CDevice, Looper, StateMachine, xPowerSubscriber {
+  public:
+    LSM6DS3H() : I2CDevice(106), Looper(
+  #ifndef PROFFIEBOARD
+      HFLINK
+  #endif    
+    ), xPowerSubscriber(pwr4_CPU) {enabled = true;}
+    
+    bool enabled;
+    void PwrOn_Callback() override { 
+      enabled = true; 
+      #ifdef DIAGNOSE_POWER
+        STDOUT.println(" sns+ ");  
+      #endif
+    }          
+    void PwrOff_Callback() override { 
+      enabled = false; 
+      #ifdef DIAGNOSE_POWER
+        STDOUT.println(" sns- ");  
+      #endif
+      uint32_t startTime = millis();
+      i2cbus.scheduledDeinitTime(0);   // set deinit timeout to 0 
+      while (millis() - startTime <= 50) {   // was 1 
+        // Loop(); // Run loop once to allow the state machine to disable sensor
+        // i2cbus.Loop();        
+        DoLoop();
+      }
+      i2cbus.scheduledDeinitTime(2000);  // restore timeout 
+    }         
+
+#else // nULTRA_PROFFIE
+  class LSM6DS3H : public I2CDevice, Looper, StateMachine {
+  public:
+    LSM6DS3H() : I2CDevice(106), Looper(
+  #ifndef PROFFIEBOARD
+      HFLINK
+  #endif    
+    ) {}
+#endif // ULTRA_PROFFIE
+
+
+
   const char* name() override { return "LSM6DS3H"; }
   enum Registers {
     FUNC_CFG_ACCESS = 0x1,
@@ -100,17 +137,7 @@ public:
     OUT_MAG_RAW_Z_H = 0x6B,
     CTRL_SPIAux = 0x70
   };
-  // was 105 , 107 
-  LSM6DS3H() : I2CDevice(106), Looper(
-#ifndef PROFFIEBOARD
-    HFLINK
-#endif    
-  )
-  #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)  
-    ,xPowerManager(xPower_Motion, X_PM_MOTION_MS, name()) 
-#endif 
-  {}
-
+  
 #define I2CLOCK() do {							\
   state_machine_.sleep_until_ = millis();				\
   while (!I2CLock()) {							\
@@ -125,7 +152,6 @@ public:
     SaberBase::RequestMotion();
     if (!random(300)) delay(350);
 #endif
-
     STATE_MACHINE_BEGIN();
 
     while (!i2cbus.inited()) YIELD();
@@ -153,7 +179,7 @@ public:
         #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
         STDOUT.println(" not found.");
         #endif
-	goto i2c_timeout;
+	      goto i2c_timeout;
       }
       I2C_WRITE_BYTE_ASYNC(CTRL1_XL, 0x84);  // 1.66kHz accel, 16G range
       I2C_WRITE_BYTE_ASYNC(CTRL2_G, 0x8C);   // 1.66kHz gyro, 2000 dps
@@ -166,36 +192,37 @@ public:
       I2C_WRITE_BYTE_ASYNC(CTRL9_XL, 0x38);  // accel xyz enable
       I2C_WRITE_BYTE_ASYNC(CTRL10_C, 0x38);  // gyro xyz enable
       if (motionSensorInterruptPin != -1) {
-	I2C_WRITE_BYTE_ASYNC(INT1_CTRL, 0x3);  // Activate INT on data ready
-	pinMode(motionSensorInterruptPin, INPUT);
+        I2C_WRITE_BYTE_ASYNC(INT1_CTRL, 0x3);  // Activate INT on data ready
+        pinMode(motionSensorInterruptPin, INPUT);
       }
       I2CUnlock();
 
       last_event_ = millis();
 #ifdef PROFFIEBOARD      
-      stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
-			  EXTI_CONTROL_RISING_EDGE, &LSM6DS3H::irq, this);
+  stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
+  EXTI_CONTROL_RISING_EDGE, &LSM6DS3H::irq, this);
 
+  #if defined(ULTRA_PROFFIE) && defined(OSx) 
+      while (enabled) {
+  #else // nULTRA_PROFFIE
       while (SaberBase::MotionRequested()) {
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-        requestPower(); // from Xpower Manager 
-        #endif
-	Poll();
-	if ((last_event_ + I2C_TIMEOUT_MILLIS * 2 - millis()) >> 31) {
-	  TRACE(MOTION, "timeout");
-    #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
-	  STDOUT.println("Motion timeout.");
-    #endif
-	  stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
-			      EXTI_CONTROL_DISABLE, &LSM6DS3H::do_nothing, nullptr);
-	  goto i2c_timeout;
-	}
-	YIELD();
-      }
+  #endif // ULTRA_PROFFIE      
+        Poll();
+        if ((last_event_ + I2C_TIMEOUT_MILLIS * 2 - millis()) >> 31) {
+          TRACE(MOTION, "timeout");
+          #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)  
+          STDOUT.println("Motion timeout.");
+          #endif
+          stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
+                  EXTI_CONTROL_DISABLE, &LSM6DS3H::do_nothing, nullptr);
+          goto i2c_timeout;
+  	    }
+	    YIELD();
+    }
 
       stm32l4_exti_notify(&stm32l4_exti, g_APinDescription[motionSensorInterruptPin].pin,
 			  EXTI_CONTROL_DISABLE, &LSM6DS3H::do_nothing, nullptr);
-#else  // PROFFIEBOARD
+#else  // nPROFFIEBOARD
       while (true) {
 	YIELD();
 	if (!SaberBase::MotionRequested()) break;
@@ -235,16 +262,24 @@ public:
         I2CUnlock();
       }
 
-#endif
+#endif // PROFFIEBOARD
+
       #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)        
-      STDOUT.println("Motion disable.");
+      STDOUT.print("Disabling motion...");
       #endif
       I2CLOCK();
       I2C_WRITE_BYTE_ASYNC(CTRL2_G, 0x0);  // accel disable
       I2C_WRITE_BYTE_ASYNC(CTRL1_XL, 0x0);  // gyro disable
       I2CUnlock();
-      
-      while (!SaberBase::MotionRequested()) YIELD();
+      #if (defined(OSx) && defined(DIAGNOSE_SENSOR)) || !defined(OSx)        
+      STDOUT.println(" done!");
+      #endif
+
+      #if defined(ULTRA_PROFFIE) && defined(OSx)
+        while (!enabled) YIELD();
+      #else // nULTRA_PROFFIE
+        while (!SaberBase::MotionRequested()) YIELD();
+      #endif // ULTRA_PROFFIE
       continue;
 
     i2c_timeout:
@@ -266,17 +301,6 @@ public:
   }
 
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xKillPower() override
-    {
-        // TODO add here deinit code 
-    }
-    void xRestablishPower() override
-    {
-      requestPower();
-      SaberBase::RequestMotion();
-    }
-#endif
 
   void Dump() override {
     STDOUT << "LSM6DS3H: last_event_ " << last_event_

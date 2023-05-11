@@ -15,42 +15,65 @@
     #define STORAGE_RES "FLASH"
   #endif
 // Unmount sdcard when we don't need it anymore.
-class SDCard : Looper 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+class SDCard : Looper , xPowerSubscriber {
+#else // nULTRA_PROFFIE
+class SDCard : Looper {
+#endif // ULTRA_PROFFIE
 public:
-  SDCard() : Looper() 
-  #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN) 
-    ,xPowerManager(xPower_SDCard, X_PM_SD_MS, name()) 
-#endif
-  {}
+  
+  #if defined(ULTRA_PROFFIE) && defined(OSx) 
+    SDCard() : Looper(), xPowerSubscriber(pwr4_SD) {}
+  #else
+    SDCard() : Looper()  {}
+  #endif
+  
   const char* name() override { return STORAGE_RES; }
 
-  bool Active() {
-#ifdef ENABLE_AUDIO    
-    if (amplifier.Active() || AudioStreamWork::sd_is_locked() || AudioStreamWork::SDActive()) {
-      last_enabled_ = millis();
-      return true;
+
+  #if defined(ULTRA_PROFFIE) && defined(OSx) 
+    bool Active() {
+      // if (amplifier.Active() || AudioStreamWork::sd_is_locked() || AudioStreamWork::SDActive()) return true;
+      if (SoundActive() || AudioStreamWork::sd_is_locked() || AudioStreamWork::SDActive()) return true;
+      // TODO add define here
+      #ifdef OSX_ENABLE_MTP 
+      if (Serial_Protocol<SerialAdapter>::GetSession()) return true;
+      #endif
+      if (SaberBase::IsOn()) return true;
+      return false;
     }
-#endif    
-    if (SaberBase::IsOn()) {
-      last_enabled_ = millis();
-      return true;
-    }
-#ifdef USB_CLASS_MSC
-    if (USBD_Configured()) return false;
-#endif
-    uint32_t t = millis() - last_enabled_;
-    if (t < 1000) return true;
-    return false;
-  }
+  #else // nOSx
+    bool Active() {
+    #ifdef ENABLE_AUDIO    
+        if (amplifier.Active() || AudioStreamWork::sd_is_locked() || AudioStreamWork::SDActive()) {
+          last_enabled_ = millis();
+          return true;
+        }
+    #endif    
+        if (SaberBase::IsOn()) {
+          last_enabled_ = millis();
+          return true;
+        }
+    #ifdef USB_CLASS_MSC
+        if (USBD_Configured()) return false;
+    #endif
+        uint32_t t = millis() - last_enabled_;
+        if (t < 1000) return true;
+        return false;
+      }  
+  #endif // OSx
+
+  
 
   void Mount() {
+    #if defined(ULTRA_PROFFIE) && defined(OSx)
+      uint32_t mountTimeout = PWRMAN_SDMOUNTTIMEOUT;
+      RequestPower(&mountTimeout);   // allow longer time for pre-loop initializations
+    #endif    
     last_enabled_ = millis();
     if (LSFS::IsMounted()) return;
+
     // Wait for card to become available, up to 1000ms
     uint32_t start = millis();
     while (!LSFS::CanMount() && millis() - start < 1000)
@@ -78,57 +101,65 @@ protected:
     last_enabled_ = millis();
   }
 
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
   void Loop() override {
-#ifdef OSX_ENABLE_MTP
-    if(!Serial_Protocol<SerialAdapter>::GetSession()) 
-    {
-#endif
+      if (Active()) 
+          RequestPower();   // for all subscribed domains       
+      if(!Serial_Protocol<SerialAdapter>::GetSession()) 
+      {        
+         if(!LSFS::IsMounted()) {   // attempt to mount once every secondm if it should be active
+          if (Active() && millis() - last_mount_try_ > 1000) {
+            last_mount_try_ = millis();
+            AudioStreamWork::LockSD_nomount(true);
+            if (LSFS::CanMount()) Mount();
+            AudioStreamWork::LockSD_nomount(false);
+          }
+        }   
+      }
+  }
+#else // nULTRA_PROFFIE
+  void Loop() override {
       if (LSFS::IsMounted()) {
         if (!Active()) {
-	        AudioStreamWork::LockSD_nomount(true);
-	        AudioStreamWork::CloseAllOpenFiles();
-          #if (defined(OSx) && defined(DIAGNOSE_STORAGE)) || !defined(OSx)
-	        STDOUT.println("Unmounting " STORAGE_RES);
-          #endif
-	        LSFS::End();
-	        AudioStreamWork::LockSD_nomount(false);
+          AudioStreamWork::LockSD_nomount(true);
+          AudioStreamWork::CloseAllOpenFiles();                 
+          STDOUT.println("Unmounting " STORAGE_RES);
+          LSFS::End();
+          AudioStreamWork::LockSD_nomount(false);
         } 
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-         else {
-          requestPower(); // from Xpower Manager
-          } 
-        #endif
       } else {
         if (Active() && millis() - last_mount_try_ > 1000) {
-	        last_mount_try_ = millis();
-	        AudioStreamWork::LockSD_nomount(true);
-	        if (LSFS::CanMount()) Mount();
-	        AudioStreamWork::LockSD_nomount(false);
+          last_mount_try_ = millis();
+          AudioStreamWork::LockSD_nomount(true);
+          if (LSFS::CanMount()) Mount();
+          AudioStreamWork::LockSD_nomount(false);
         }
       }
-#ifdef OSX_ENABLE_MTP      
-    }
-#endif
-
   }
+#endif // ULTRA_PROFFIE
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xKillPower() override
-    {
-       #if DOSFS_SDCARD == 1 && DOSFS_SFLASH == 0
-        // stm32l4_gpio_pin_configure(PIN_SPI_SD_POWER, (GPIO_PUPD_NONE | GPIO_OSPEED_HIGH | GPIO_OTYPE_PUSHPULL | GPIO_MODE_OUTPUT));
-        // stm32l4_gpio_pin_write(PIN_SPI_SD_POWER, 1);
-       #endif
-    }
-    void xRestablishPower() override
-    {  
-       #if DOSFS_SDCARD == 1 && DOSFS_SFLASH == 0
-        // stm32l4_gpio_pin_configure(PIN_SPI_SD_POWER, (GPIO_PUPD_NONE | GPIO_OSPEED_HIGH | GPIO_OTYPE_PUSHPULL | GPIO_MODE_OUTPUT));
-        // stm32l4_gpio_pin_write(PIN_SPI_SD_POWER, 0);
-      #endif
-      requestPower(); 
-    }
-#endif
+  
+  
+
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+        void PwrOn_Callback() override { 
+          #ifdef DIAGNOSE_POWER
+            STDOUT.println(" sd+ "); 
+          #endif
+          }         
+        void PwrOff_Callback() override { 
+            AudioStreamWork::LockSD_nomount(true);
+            AudioStreamWork::CloseAllOpenFiles();
+            #ifdef DIAGNOSE_STORAGE
+              STDOUT.println("Unmounting " STORAGE_RES);
+            #endif          
+            LSFS::End();
+            AudioStreamWork::LockSD_nomount(false);
+            #ifdef DIAGNOSE_POWER
+              STDOUT.println(" sd- "); 
+            #endif
+        }         
+#endif // ULTRA_PROFFIE
 
 private:
   uint32_t last_enabled_;
@@ -137,7 +168,7 @@ private:
 
 SDCard sdcard;
 inline void MountSDCard() { sdcard.Mount(); }
-#else
+#else  // v4 && enable_sd
 inline void MountSDCard() {  }
 #endif // v4 && enable_sd
 

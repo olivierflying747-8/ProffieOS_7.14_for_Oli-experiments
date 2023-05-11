@@ -367,10 +367,11 @@ uint64_t loop_cycles = 0;
 #include "common/command_parser.h"
 #include "common/monitor_helper.h"
 
+
 CommandParser* parsers = NULL;
 MonitorHelper monitor_helper;
 
-#include "common/vec3.h"
+#include "common/vec3.h"  
 #include "common/quat.h"
 #include "common/ref.h"
 #include "common/events.h"
@@ -381,7 +382,9 @@ SaberBase::LockupType SaberBase::lockup_ = SaberBase::LOCKUP_NONE;
 SaberBase::ColorChangeMode SaberBase::color_change_mode_ =
   SaberBase::COLOR_CHANGE_MODE_NONE;
 bool SaberBase::on_ = false;
-uint32_t SaberBase::last_motion_request_ = 0;
+#if !defined(ULTRA_PROFFIE) || !defined(OSx) 
+  uint32_t SaberBase::last_motion_request_ = 0;
+#endif 
 uint32_t SaberBase::current_variation_ = 0;
 float SaberBase::sound_length = 0.0;
 int SaberBase::sound_number = -1;
@@ -429,7 +432,7 @@ int32_t clamptoi24(int32_t x) {
 
 void EnableBooster();
 void EnableAmplifier();
-bool AmplifierIsActive();
+// bool AmplifierIsActive();
 void MountSDCard();
 const char* GetSaveDir();
 
@@ -452,12 +455,18 @@ const char* next_current_directory(const char* dir) {
   return dir;
 }
 
+
 #include "sound/sound.h"
+
+
 #include "common/battery_monitor.h"
 #include "common/xBatteryCharger.h"
+
+
 #include "common/color.h"
 #include "common/range.h"
 #include "common/fuse.h"
+
 #include "blades/blade_base.h"
 #include "blades/blade_wrapper.h"
 
@@ -561,6 +570,7 @@ struct is_same_type<T, T> { static const bool value = true; };
 #include "functions/effect_increment.h"
 #include "functions/increment.h"
 
+
 // transitions
 #include "transitions/fade.h"
 #include "transitions/join.h"
@@ -577,17 +587,19 @@ struct is_same_type<T, T> { static const bool value = true; };
 #include "transitions/extend.h"
 #include "transitions/center_wipe.h"
 #include "transitions/sequence.h"
-
 #include "styles/legacy_styles.h"
 //responsive styles
+
 #include "styles/responsive_styles.h"
-#include "styles/pov.h"
+
+// #include "styles/pov.h"
 
 class NoLED;
 
 #include "blades/power_pin.h"
 #include "blades/drive_logic.h"
 #include "blades/pwm_pin.h"
+
 
 #ifdef OSx  // added only on Osx , error  on compiling on normal OS battery_monitor.voltageLSB not found
             // TODO ask if x files (analog , cod reader are only for OSx ) - YES!
@@ -893,6 +905,31 @@ class Commands : public CommandParser {
     STDOUT.println("board_info-END");
     return true;
   }
+
+#ifdef ENABLE_DEVELOPER_COMMANDS
+    if (!strcmp(cmd, "whatison")) {
+      bool on = false;
+      SaberBase::DoIsOn(&on);
+      STDOUT.print("Saber bases: ");
+      STDOUT.println(on ? "On" : "Off");
+      STDOUT.print("Beeper: ");
+      STDOUT.println(beeper.isPlaying() ? "On" : "Off");
+      STDOUT.print("Talker: ");
+      STDOUT.println(talkie.isPlaying() ? "On" : "Off");
+      for (size_t i = 0; i < NELEM(wav_players); i++) {
+	       STDOUT << "Wav player " << i << ": "
+                << (wav_players[i].isPlaying() ? "On" : "Off")
+                << " (eof =  " << wav_players[i].eof()
+                << " volume = " << wav_players[i].volume()
+                << " refs = " << wav_players[i].refs()
+                << " fade speed = " << wav_players[i].fade_speed()
+                << " filename=" << wav_players[i].filename() << ")\n";
+      }
+      return true;
+    }
+#endif 
+
+
 #endif
 
 
@@ -952,6 +989,7 @@ class Commands : public CommandParser {
           STDOUT.println("Done");
           return true;
         }
+       
     #endif // ENABLE_SERIALFLASH
 
     #ifdef ENABLE_SD
@@ -1269,7 +1307,32 @@ class Commands : public CommandParser {
     #endif // TEENSYDUINO
 
 
-#else // OSx  
+#else // OSx
+
+    if (!strcmp(cmd, "format")) {
+      STDOUT.println("format-START");
+      int res;
+      res = f_format(0);        // perform format
+      if(res) {
+        res = f_hardformat(0);
+        STDOUT.print("HARD format completed. Ans = ");
+        STDOUT.println(res);
+      } else {
+        STDOUT.print("FAST format completed. Ans = ");
+        STDOUT.println(res);
+      }
+      STDOUT.println("format-END");
+      return true;
+    
+    }
+#ifdef ULTRA_PROFFIE
+        if (!strcmp(cmd, "get_bor")) {
+      STDOUT.println("get_bor-START");
+      STDOUT.print("BOR Level =  "); STDOUT.println(stm32l4_bor_get());
+      STDOUT.println("get_bor-END");
+      return true;
+    }
+#endif
 
   #ifndef DISABLE_DIAGNOSTIC_COMMANDS
     if (!strcmp(cmd, "renamePath") && e) {
@@ -1382,17 +1445,6 @@ class Commands : public CommandParser {
       }
   #endif // ENABLE_DIAGNOSE_COMMANDS
 
-  #if defined(X_POWER_MAN) && defined(ULTRA_PROFFIE)  && defined(ENABLE_DEVELOPER_MODE)
-      // if(!strcmp(cmd, "goToSleep")) {
-      //   xPowerManager::cpu_EnterSTOP0Mode(PWR_STOPENTRY_WFE);   // PWR_STOPENTRY_WFE PWR_STOPENTRY_WFI
-      //   return true;
-      // }
-
-      if(!strcmp(cmd, "printRequestedTime")) {
-        xPowerManager::PrintRequestedTime();   // PWR_STOPENTRY_WFE PWR_STOPENTRY_WFI
-        return true;
-      }
-  #endif // X_POWER_MAN
 
   #if defined(X_PROBECPU) && defined(ENABLE_DEVELOPER_MODE)
       if (!strcmp(cmd, "malloc")) {
@@ -1899,6 +1951,10 @@ SSD1306Template<128, uint32_t> display(&display_controller);
 #ifdef GYRO_CLASS
 // Can also be gyro+accel.
 StaticWrapper<GYRO_CLASS> gyroscope;
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+void EnableMotion() {gyroscope->enabled = true; }
+void DisableMotion() {gyroscope->enabled = false; }
+#endif
 #endif
 
 #ifdef ACCEL_CLASS
@@ -1907,9 +1963,14 @@ StaticWrapper<ACCEL_CLASS> accelerometer;
 
 #endif   // ENABLE_MOTION
 
-#include "sound/amplifier.h"
-#include "common/sd_card.h"
-#include "common/booster.h"
+#if defined(ULTRA_PROFFIE) && defined(OSx) 
+  #include "common/sd_card.h"   // amplifier and booster replaced by power manager
+#else // nOSx
+  #include "sound/amplifier.h"
+  #include "common/sd_card.h"©
+  #include "common/booster.h"
+#endif // OSx
+
 
 
 #if defined(ULTRA_PROFFIE) && defined(OSx)

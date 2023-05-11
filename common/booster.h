@@ -6,22 +6,13 @@
 #if (VERSION_MAJOR >= 4 && !defined(ULTRA_PROFFIE)) || (defined(ULTRA_PROFFIE) && PF_BOOSTER == 1)
 
 // Turns off booster when we don't need it anymore.
-class Booster : Looper, StateMachine, CommandParser 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-, xPowerManager {
-#else 
-  {
-#endif
+// class Booster : Looper, StateMachine, CommandParser 
+class Booster : Looper, StateMachine, CommandParser {
 public:
-#ifndef OSx
   Booster() : Looper(), CommandParser() {}
-#else // OSx: schedule booster loop at 100 ms
-  Booster() : Looper(), CommandParser()
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-  , xPowerManager(xPower_Audio, X_PM_BOOST_MS, name())
-  #endif
-   {}    // was 100000
-#endif // OSx
+
+
+
   const char* name() override { return "Booster"; }
 
   bool Active() {
@@ -41,8 +32,8 @@ public:
     last_enabled_ = millis();
     if (!on_) {
       battery_monitor.SetPinHigh(true);
-      pinMode(boosterPin, OUTPUT);
-      digitalWrite(boosterPin, HIGH);
+      // pinMode(boosterPin, OUTPUT);
+      // digitalWrite(boosterPin, HIGH);
       on_ = true;
       delay(10); // Give it a little time to wake up.
       battery_monitor.SetPinHigh(false);
@@ -52,8 +43,8 @@ public:
 protected:
   void Setup() override {
     on_ = false;
-    pinMode(boosterPin, OUTPUT);
-    digitalWrite(boosterPin, LOW); // turn the booster off
+    // pinMode(boosterPin, OUTPUT);
+    // digitalWrite(boosterPin, LOW); // turn the booster off
     last_enabled_ = millis();
   }
 
@@ -62,9 +53,6 @@ protected:
     while (true) {
       while (Active())
       {
-        #if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-        requestPower();
-        #endif
         YIELD();
       }
       // 10 * 0.1 s = 1 second
@@ -74,8 +62,8 @@ protected:
       #if (defined(OSx) && defined(DIAGNOSE_AUDIO)) || !defined(OSx)  
       STDOUT.println("Booster off.");
       #endif
-      digitalWrite(boosterPin, LOW); // turn the booster off
-      // pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
+      // digitalWrite(boosterPin, LOW); // turn the booster off
+      // // pinMode(amplifierPin, INPUT_ANALOG); // Let the pull-down do the work
       on_ = false;
       while (!Active()) YIELD();
     }
@@ -90,7 +78,7 @@ protected:
         return true;
       }
       if (!strcmp(arg, "off")) {
-        digitalWrite(boosterPin, LOW); // turn the booster off
+        // digitalWrite(boosterPin, LOW); // turn the booster off
         return true;
       }
     }
@@ -104,17 +92,7 @@ protected:
     #endif
   }
 
-#if defined(ULTRA_PROFFIE) && defined(OSx) && defined(X_POWER_MAN)
-    void xKillPower() override
-    {
-        digitalWrite(boosterPin, LOW); // turn the booster off
-        pinMode(boosterPin, INPUT);
-    }
-    void xRestablishPower() override
-    {
-      requestPower(); 
-    }
-#endif
+
 
 private:
   bool on_;
@@ -129,18 +107,18 @@ inline void EnableBooster() {
 }
 #ifdef ULTRA_PROFFIE
 void SilentEnableBooster(bool on) {
-  if(on)
-        digitalWrite(boosterPin, HIGH);
-  else 
-        digitalWrite(boosterPin, LOW);
+  // if(on)
+  //       digitalWrite(boosterPin, HIGH);
+  // else 
+  //       digitalWrite(boosterPin, LOW);
 }
 #endif
 
 #else
-inline void EnableBooster() { }
-  #ifdef ULTRA_PROFFIE
-  void SilentEnableBooster(bool on) { }
-  #endif // end PROFFIELite
+  inline void EnableBooster() { }
+  // #ifdef ULTRA_PROFFIE
+  // void SilentEnableBooster(bool on) { }
+  // #endif // end ULTRA_PROFFIE
 #endif   // V4
 
 #endif

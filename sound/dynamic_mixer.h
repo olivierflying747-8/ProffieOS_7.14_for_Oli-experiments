@@ -3,8 +3,6 @@
 
 #include <algorithm>
 
-// Audio compressor, takes N input channels, sums them and divides the
-// result by the square root of the average volume.
 template<int N> class AudioDynamicMixer : public ProffieOSAudioStream, Looper {
 public:
   AudioDynamicMixer() {
@@ -12,6 +10,8 @@ public:
       streams_[i] = nullptr;
     }
   }
+// #endif
+
   const char* name() override { return "AudioDynamicMixer"; }
 
 #if defined(STM32L433xx) && defined(__FAST_MATH__)
@@ -56,7 +56,7 @@ public:
 #endif
   
   int read(int16_t* data, int elements) override {
-    SCOPED_PROFILER();
+    SCOPED_PROFILER();    
     int32_t sum[AUDIO_BUFFER_SIZE];
     int ret = elements;
     int v = 0, v2 = 0;
@@ -127,7 +127,6 @@ public:
     last_sample_ = v2 * volume_;
     last_sum_ = v;
     
-//    STDOUT.println(vol_);
     return ret;
   }
 
@@ -178,7 +177,7 @@ public:
   }
 
   #if !defined(OSx) || defined(OLDPROFILE)
-    void set_volume(int32_t volume) { volume_ = volume; STDOUT.print("[dynamic_mixer.set_volume] Set "); STDOUT.println(volume_); }
+    void set_volume(int32_t volume) { volume_ = volume; } // STDOUT.print("[dynamic_mixer.set_volume] Set "); STDOUT.println(volume_); }
   #else // OSx
      void set_volume(int32_t volume) { 
       uint32_t tmp = volume * (userProfile.masterVolume+1);
