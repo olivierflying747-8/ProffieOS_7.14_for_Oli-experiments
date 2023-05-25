@@ -1199,8 +1199,7 @@ public:
   void Loop() override {
 
 #if defined(ULTRA_PROFFIE) && defined(OSx) 
-    // uint32_t CPUtimeout = 300000;   // Exceptional power timeout for serial parser
-    uint32_t CPUtimeout = 10000;   // Exceptional power timeout for serial parser
+    uint32_t CPUtimeout = 300000;   // Exceptional power timeout for serial parser 
 #endif
 
     STATE_MACHINE_BEGIN();

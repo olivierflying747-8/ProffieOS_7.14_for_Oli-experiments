@@ -5,15 +5,30 @@
 
     #include "looper.h"
 
-    class xBatteryCharger : public Looper, public CommandParser {
+    class xBatteryCharger : public Looper, public CommandParser, public xPowerSubscriber {
     public:
+    void PwrOn_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" cpu+ "); 
+    #endif
+    }
+    void PwrOff_Callback() override { 
+    #ifdef DIAGNOSE_POWER
+      STDOUT.println(" cpu- "); 
+    #endif
+    }
+    bool HoldPower() override {  // Return true to pause power subscriber timeout
+        if (charging) return true;
+        return false;
+    }
+
     const char* name() override { return "Battery Charger"; }
 
     /* @brief : Constructor, initializing data members to default values 
     *  @param : void
     *  @retval: void
     */
-    xBatteryCharger() {
+    xBatteryCharger() : xPowerSubscriber(pwr4_CPU){
         ignited = false;
         charging = false;
         lastChargeState = false;
@@ -144,6 +159,10 @@
 
     xBatteryCharger chargeStatus;
 
+    uint16_t xChargerGetLimit()
+    {
+        return chargeStatus.GetChargeLimit();
+    }
     #endif // ULTRA_PROFFIE
 
 #endif

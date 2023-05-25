@@ -455,6 +455,9 @@ const char* next_current_directory(const char* dir) {
   return dir;
 }
 
+#ifdef ULTRA_PROFFIE_CHARGER_EQ
+uint16_t xChargerGetLimit();
+#endif
 
 #include "sound/sound.h"
 

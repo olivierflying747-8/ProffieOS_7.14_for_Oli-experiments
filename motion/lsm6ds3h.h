@@ -27,9 +27,10 @@
       uint32_t startTime = millis();
       i2cbus.scheduledDeinitTime(0);   // set deinit timeout to 0 
       while (millis() - startTime <= 50) {   // was 1 
-        // Loop(); // Run loop once to allow the state machine to disable sensor
-        // i2cbus.Loop();        
-        DoLoop();
+        // Run lsm and i2c loop to allow the state machine to disable sensor
+        i2cbus.Loop(); // run i2cbus loop 
+        Loop();        // run motion loop 
+        // DoLoop();
       }
       i2cbus.scheduledDeinitTime(2000);  // restore timeout 
     }         
