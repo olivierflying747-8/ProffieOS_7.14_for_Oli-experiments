@@ -9,7 +9,6 @@
 #ifndef STYLE_LIB__H
 #define STYLE_LIB__H
 
-#ifdef OSx
 
 #include <vector>
 #include "style_ptr.h"
@@ -69,7 +68,7 @@ vector<StyleDescriptor> styles {
 		GOOD4(StyleHeart::_4analog) },
   
 		
-    #ifdef BOARDTYPE_ZERO
+	#if defined(ULTRAPROFFIE) && ULTRAPROFFIE_VERSION == 'Z'
     // AudioShimmer II  for analog (in-hilt LED) blades
         {   StylePtr<InOutHelper<Layers<AudioFlicker<Rgb<255,0,0>,Rgb<127,0,0>>,
       SimpleClashL<Sequence<White,LightPink,20,4,0b1010100000000000>,200,EFFECT_CLASH,Int<0>>,
@@ -179,8 +178,6 @@ vector<StyleDescriptor> styles {
 
 
 
-
-
 // Get pointer to a style in the 'styles' vector - by name
 StyleDescriptor* GetStyle(const char* styleName) {
     // STDOUT.print ("Finding style "); STDOUT.println(styleName);
@@ -206,6 +203,6 @@ StyleDescriptor* GetDefaultStyle(StyleHeart good4_) {
     return 0;
 }
 
-#endif // OSx 
+
 
 #endif  // STYLE_LIB__H
