@@ -16,34 +16,34 @@ extern SaberBase* saberbases;
 // Effects may have a location, but do not generally have a "duration".
 // However, durations may be derived from blade styles or sound effect durations
 // associated with the effect.
-#define DEFINE_ALL_EFFECTS()			            \
-    DEFINE_EFFECT(NONE)				                \
-    DEFINE_EFFECT(CLASH)			                \
-    DEFINE_EFFECT(CLASH_UPDATE)			          \
-    DEFINE_EFFECT(BLAST)			                \
-    DEFINE_EFFECT(FORCE)			                \
-    DEFINE_EFFECT(STAB)				                \
-    DEFINE_EFFECT(BOOT)				                \
-    DEFINE_EFFECT(LOCKUP_BEGIN)			          \
-    DEFINE_EFFECT(LOCKUP_END)			            \
-    DEFINE_EFFECT(DRAG_BEGIN)			            \
-    DEFINE_EFFECT(DRAG_END)			              \
-    DEFINE_EFFECT(PREON)			                \
-    DEFINE_EFFECT(POSTOFF)			              \
-    DEFINE_EFFECT(IGNITION)			              \
-    DEFINE_EFFECT(RETRACTION)			            \
-    DEFINE_EFFECT(CHANGE)			                \
-    DEFINE_EFFECT(NEWFONT)			              \
-    DEFINE_EFFECT(LOW_BATTERY)			          \
+#define DEFINE_ALL_EFFECTS()		      \
+    DEFINE_EFFECT(NONE)			      \
+    DEFINE_EFFECT(CLASH)		      \
+    DEFINE_EFFECT(CLASH_UPDATE)		      \
+    DEFINE_EFFECT(BLAST)		      \
+    DEFINE_EFFECT(FORCE)		      \
+    DEFINE_EFFECT(STAB)			      \
+    DEFINE_EFFECT(BOOT)			      \
+    DEFINE_EFFECT(LOCKUP_BEGIN)		      \
+    DEFINE_EFFECT(LOCKUP_END)		      \
+    DEFINE_EFFECT(DRAG_BEGIN)		      \
+    DEFINE_EFFECT(DRAG_END)		      \
+    DEFINE_EFFECT(PREON)		      \
+    DEFINE_EFFECT(POSTOFF)		      \
+    DEFINE_EFFECT(IGNITION)		      \
+    DEFINE_EFFECT(RETRACTION)		      \
+    DEFINE_EFFECT(CHANGE)		      \
+    DEFINE_EFFECT(NEWFONT)		      \
+    DEFINE_EFFECT(LOW_BATTERY)		      \
     DEFINE_EFFECT(POWERSAVE)                  \
     DEFINE_EFFECT(BATTERY_LEVEL)              \
     DEFINE_EFFECT(VOLUME_LEVEL)               \
     /* Allows style to turn blade ON for interactive effects if prop/style support, FAST_ON skips PREON. */     \
     DEFINE_EFFECT(ON)                         \
     DEFINE_EFFECT(FAST_ON)                    \
-    DEFINE_EFFECT(QUOTE)			                \
-    DEFINE_EFFECT(SECONDARY_IGNITION)		      \
-    DEFINE_EFFECT(SECONDARY_RETRACTION)		    \
+    DEFINE_EFFECT(QUOTE)		      \
+    DEFINE_EFFECT(SECONDARY_IGNITION)	      \
+    DEFINE_EFFECT(SECONDARY_RETRACTION)	      \
     /* Allows style to turn blade OFF for interactive effects if prop/style support, FAST_OFF skips POSTOFF. */ \
     DEFINE_EFFECT(OFF)                        \
     DEFINE_EFFECT(FAST_OFF)                   \
@@ -52,30 +52,30 @@ extern SaberBase* saberbases;
     DEFINE_EFFECT(INTERACTIVE_PREON)          \
     /* Triggers a Blaster sound to interact with and creates an EFFECT_BLAST if prop/style support. */          \
     DEFINE_EFFECT(INTERACTIVE_BLAST)          \
-    DEFINE_EFFECT(TRACK)			                \
+    DEFINE_EFFECT(TRACK)		      \
     DEFINE_EFFECT(BEGIN_BATTLE_MODE)          \
     DEFINE_EFFECT(END_BATTLE_MODE)            \
     DEFINE_EFFECT(BEGIN_AUTO_BLAST)           \
     DEFINE_EFFECT(END_AUTO_BLAST)             \
     /* Triggers the change for sets of sounds within the font from one alternative to another. */               \
-    DEFINE_EFFECT(ALT_SOUND)			            \
+    DEFINE_EFFECT(ALT_SOUND)		      \
     /* Triggers an optional sound effect during transitions from within a style via TrDoEffect. */              \
-    DEFINE_EFFECT(TRANSITION_SOUND)		        \
+    DEFINE_EFFECT(TRANSITION_SOUND)	      \
     /* Toggles an optonal sound effect loop ON/OFF from within a style via TrDoEffect. */                       \
     DEFINE_EFFECT(SOUND_LOOP)                 \
     /* Blaster effects */                     \
-    DEFINE_EFFECT(STUN)				                \
-    DEFINE_EFFECT(FIRE)				                \
-    DEFINE_EFFECT(CLIP_IN)			              \
-    DEFINE_EFFECT(CLIP_OUT)			              \
-    DEFINE_EFFECT(RELOAD)			                \
-    DEFINE_EFFECT(MODE)				                \
-    DEFINE_EFFECT(RANGE)			                \
-    DEFINE_EFFECT(EMPTY)			                \
-    DEFINE_EFFECT(FULL)				                \
-    DEFINE_EFFECT(JAM)				                \
-    DEFINE_EFFECT(UNJAM)                  		\
-    DEFINE_EFFECT(PLI_ON)                  		\
+    DEFINE_EFFECT(STUN)			      \
+    DEFINE_EFFECT(FIRE)			      \
+    DEFINE_EFFECT(CLIP_IN)		      \
+    DEFINE_EFFECT(CLIP_OUT)		      \
+    DEFINE_EFFECT(RELOAD)		      \
+    DEFINE_EFFECT(MODE)			      \
+    DEFINE_EFFECT(RANGE)		      \
+    DEFINE_EFFECT(EMPTY)		      \
+    DEFINE_EFFECT(FULL)			      \
+    DEFINE_EFFECT(JAM)			      \
+    DEFINE_EFFECT(UNJAM)                      \
+    DEFINE_EFFECT(PLI_ON)                     \
     DEFINE_EFFECT(PLI_OFF)                    \
     /* Mini game effects */                   \
     DEFINE_EFFECT(GAME_START)                 \
@@ -89,13 +89,13 @@ extern SaberBase* saberbases;
     DEFINE_EFFECT(GAME_WIN)                   \
     DEFINE_EFFECT(GAME_LOSE)                  \
     /* user-definable effects */              \
-    DEFINE_EFFECT(USER1)                  		\
-    DEFINE_EFFECT(USER2)                  		\
-    DEFINE_EFFECT(USER3)                  		\
-    DEFINE_EFFECT(USER4)                  		\
-    DEFINE_EFFECT(USER5)                  		\
-    DEFINE_EFFECT(USER6)                  		\
-    DEFINE_EFFECT(USER7)                  		\
+    DEFINE_EFFECT(USER1)                      \
+    DEFINE_EFFECT(USER2)                      \
+    DEFINE_EFFECT(USER3)                      \
+    DEFINE_EFFECT(USER4)                      \
+    DEFINE_EFFECT(USER5)               	      \
+    DEFINE_EFFECT(USER6)                      \
+    DEFINE_EFFECT(USER7)		      \
     DEFINE_EFFECT(USER8)                      \
     /* ERRORS */                              \
     DEFINE_EFFECT(SD_CARD_NOT_FOUND)          \
@@ -104,6 +104,13 @@ extern SaberBase* saberbases;
     DEFINE_EFFECT(FONT_DIRECTORY_NOT_FOUND)   \
     /* BC Blaster prop effect */              \
     DEFINE_EFFECT(DESTRUCT)                   \
+    /* Multi prop effects */                  \
+    //DEFINE_EFFECT(BLASTERMODE)                \
+    //DEFINE_EFFECT(SABERMODE)                  \
+    //DEFINE_EFFECT(DETMODE)                    \
+    //DEFINE_EFFECT(JETMODE)                    \
+    //DEFINE_EFFECT(DROIDMODE)                  \
+
 
 #define DEFINE_EFFECT(X) EFFECT_##X,
 enum class EffectType {
