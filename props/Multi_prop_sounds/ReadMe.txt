@@ -2,6 +2,8 @@ Thank you for using my multi_prop.h prop for Proffie OS
 created by olivierflying747-8 with the help of ryryog25, profezzorn & NoSloppy
 you can find us at https://crucible.hubbe.net
 
+This is still work in progress, it compiles with ProffieOS 7.14 & Arduino 1.8.19 but has not been tested on a saber.
+
 For best enjoyment, you can add these wav files to your common directory on your SD-card.
 However if you don't, a default double beeper sound will be used when you change between modes.
 
