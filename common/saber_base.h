@@ -226,10 +226,10 @@ public:
     sound_number = -1;
   }
 
-#define SABERFUN(NAME, EFFECT, TYPED_ARGS, ARGS)		            \
+#define SABERFUN(NAME, EFFECT, TYPED_ARGS, ARGS)		\
 public:                                                         \
   static void Do##NAME TYPED_ARGS {                             \
-    ClearSoundInfo();				                                    \
+    ClearSoundInfo();				                \
     CHECK_LL(SaberBase, saberbases, next_saber_);               \
     for (SaberBase *p = saberbases; p; p = p->next_saber_) {    \
       p->SB_##NAME ARGS;                                        \
@@ -243,14 +243,14 @@ public:                                                         \
   virtual void SB_##NAME TYPED_ARGS {}                          \
   virtual void SB_##NAME##2 TYPED_ARGS {}
 
-#define SABERBASEFUNCTIONS()					                                             	  \
+#define SABERBASEFUNCTIONS()					                      \
   SABERFUN(Effect, effect, (EffectType effect, float location), (effect, location));  \
-  SABERFUN(On, EFFECT_IGNITION, (), ());				                                      \
-  SABERFUN(Off, EFFECT_RETRACTION, (OffType off_type), (off_type));	                  \
-  SABERFUN(BladeDetect, EFFECT_NONE, (bool detected), (detected));	                  \
+  SABERFUN(On, EFFECT_IGNITION, (), ());				              \
+  SABERFUN(Off, EFFECT_RETRACTION, (OffType off_type), (off_type));	              \
+  SABERFUN(BladeDetect, EFFECT_NONE, (bool detected), (detected));	              \
   SABERFUN(Change, EFFECT_CHANGE, (ChangeType change_type), (change_type));           \
   SABERFUN(Top, EFFECT_NONE, (uint64_t total_cycles), (total_cycles));	              \
-  SABERFUN(IsOn, EFFECT_NONE, (bool* on), (on));			                                \
+  SABERFUN(IsOn, EFFECT_NONE, (bool* on), (on));			              \
   
   SABERBASEFUNCTIONS();
 
