@@ -157,7 +157,7 @@ void switchModes() {
             break;
         /*
         case PropMode::DROID:
-            if (!hybrid_font.PlayPolyphonic(&SFX_tronmode)) { //auto beepers
+            if (!hybrid_font.PlayPolyphonic(&SFX_vehiclemode)) { //auto beepers
                 beeper.Beep(0.05, 2000);
                 beeper.Silence(0.05);
                 beeper.Beep(0.05, 2000);
