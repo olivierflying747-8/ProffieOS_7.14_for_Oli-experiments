@@ -144,7 +144,7 @@ public:
         }
     }
 
-/* --- The following are more place holders ---
+/* --- The following are place holders ---
     // Play running Sound
     void PlayRunningSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_running)) beep();
