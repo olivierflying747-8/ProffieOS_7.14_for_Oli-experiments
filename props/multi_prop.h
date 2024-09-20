@@ -1,5 +1,6 @@
-// attempt 035 (working version for saber-blaster-detonator-jetpack, all with sound-effects on transition between props.
+// attempt 037 (working version for saber-blaster-detonator-jetpack, all with sound-effects on transition between props.
 //                                                                       (provided by NoSloppy)
+// adding MorseCode
 
 /*
 multi_prop.h allows for 4 (more coming) discrete prop files to be used, 
@@ -44,14 +45,12 @@ EFFECT(volmax);     // for maximum volume reached
                                                 //                         | (MUST have "bullets counts" activated in CONFIG_BOTTOM)
 #include "../props/detonator.h"                 //use Detonator            | Compiling with multi_prop.h
 #include "../props/jetpack_prop.h"              //use Jetpack              | Compiling with multi_prop.h
+#include "../props/morsecode_prop.h"            //use MorseCode - In progress (type morse code on the buttons & it plays on LEDs, speaker & OLED)
+                                                //(another of my crazy idea!)
 //#include "../props/droid_prop.h"              //In progress (plays with droids sounds)
 //#include "../props/vehicle_prop.h"            //To be created (find better name - plays with SW vehicles sounds and their weapons - ships, speeders, walkers, pod-racers, ...)
-//#include "../props/morse_code_prop.h"         //In progress (type morse code on the buttons & it plays on LEDs, speaker & OLED)
-                                                //(another of my crazy idea!)
-//#include "../props/tron.h"                    //To be created for the Tron Motorcycle Stick/Disk "Thingy"
-                                                //(Why ? Because I have a very wild imagination & it sounds fun!)
 #undef PROP_TYPE
-#define PROP_TYPE MultiProp <SaberFett263Buttons, Blaster, Detonator, Jetpack>
+#define PROP_TYPE MultiProp <SaberFett263Buttons, Blaster, Detonator, Jetpack, MorseCode>
 #endif
 */
 
@@ -74,19 +73,18 @@ EFFECT(blastermode);
 EFFECT(sabermode); 
 EFFECT(detmode);
 EFFECT(jetmode);
-EFFECT(droidmode);
 //"NO_EFFECT"(morsecodemode); // No need for a "morsecode.wav" file. This is done using "Beepers".
-//EFFECT(tronmode); // Uncomment if implementing Tron
+//EFFECT(droidmode);        // Uncomment if implementing droid
+//EFFECT(vehiclemode);      // Uncomment if implementing Vehicle
 
 enum class PropMode {
     SABER,
     BLASTER,
     DETONATOR,
     JETPACK,
+    MORSECODE,      // (morsecode_prop.h in progress)
     //DROID,        // Uncomment when ready to implement Droid functionality (droid_prop.h in progress)
-    //MORSECODE,    // Uncomment when ready to implement MorseCode functionality (morsecode_prop.h in progress)
-    //TRON,         // Uncomment if implementing Tron Motorcycle Stick/Disk "Thingy" functionality
-                    // (Why ? Because I have a very wild imagination & it sounds fun!)
+    //VEHICLE,      // Uncomment if implementing Vehicle
 };
 
 // Define the duration for TWO_BUTTONS_eXtra_LONG_PUSH (4 sec)
@@ -130,6 +128,17 @@ void switchModes() {
             currentMode = PropMode::JETPACK;
             break;
         case PropMode::JETPACK:
+            //No "SFX" for MorseCode, it will be in morse code !
+                { beeper.Beep(0.05, 2000);
+                beeper.Silence(0.05);
+                beeper.Beep(0.05, 4000);
+                beeper.Silence(0.05);
+                beeper.Beep(0.05, 2000);
+                beeper.Silence(0.05);
+                beeper.Beep(0.05, 2000);
+                };
+            currentMode = PropMode::MORSECODE;
+        case PropMode::MORSECODE:
             /*
             if (!hybrid_font.PlayPolyphonic(&SFX_droidmode)) { //auto beepers
                 beeper.Beep(0.05, 2000);
@@ -137,6 +146,7 @@ void switchModes() {
                 beeper.Beep(0.05, 2000);
                 };
             currentMode = PropMode::DROID;
+            break;
             */
             if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) { //auto beepers
                 beeper.Beep(0.05, 2000);
@@ -147,26 +157,14 @@ void switchModes() {
             break;
         /*
         case PropMode::DROID:
-            //No "SFX" for Morsecode, it will be in morse code !
-                { beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 4000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
-            currentMode = PropMode::MORSECODE;
-            break;
-        case PropMode::MORSECODE:
             if (!hybrid_font.PlayPolyphonic(&SFX_tronmode)) { //auto beepers
                 beeper.Beep(0.05, 2000);
                 beeper.Silence(0.05);
                 beeper.Beep(0.05, 2000);
                 };
-            currentMode = PropMode::TRON;
+            currentMode = PropMode::VEHICLE;
             break;
-        case PropMode::TRON:
+        case PropMode::VEHICLE:
             if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) { //auto beepers
                 beeper.Beep(0.05, 2000);
                 beeper.Silence(0.05);
@@ -179,8 +177,8 @@ void switchModes() {
 }
 
 // Template to support multi-prop modes
-template<class Saber, class Blaster, class Detonator, class Jetpack> /*, class Droid, class Morsecode, class Tron*/
-class MultiProp : public virtual Saber, public virtual Blaster, public virtual Detonator, public virtual Jetpack { /*, public virtual Droid, public virtual Morsecode, public virtual Tron*/
+template<class Saber, class Blaster, class Detonator, class Jetpack, class MorseCode> /*, class Droid, class Vehicle*/
+class MultiProp : public virtual Saber, public virtual Blaster, public virtual Detonator, public virtual Jetpack, public virtual MorseCode { /*, public virtual Droid, public virtual Vehicle*/
 public:
 
     // Button mapping for 2 and 3-button setups
@@ -261,15 +259,15 @@ public:
             case PropMode::JETPACK:
                 return Jetpack::Event(button, event);
                 break;
+            case PropMode::MORSECODE:
+                return MorseCode::Event(button, event);
+                break;
             /*
             case PropMode::DROID:
                 return Droid::Event(button, event);
                 break;
-            case PropMode::MORSECODE:
-                return Morsecode::Event(button, event);
-                break;
-            case PropMode::TRON:
-                return Tron::Event(button, event);
+            case PropMode::VEHICLE:
+                return Vehicle::Event(button, event);
                 break;
             */
        }
@@ -291,15 +289,15 @@ public:
             case PropMode::JETPACK:
                 return Jetpack::Event2(button, event, modifiers);
                 break;
+            case PropMode::MORSECODE:
+                return MorseCode::Event2(button, event);
+                break;
             /*
             case PropMode::DROID:
                 return Droid::Event2(button, event, modifiers);
                 break;
-            case PropMode::MORSECODE:
-                return Morsecode::Event2(button, event);
-                break;
-            case PropMode::TRON:
-               return Tron::Event2(button, event, modifiers);
+            case PropMode::VEHICLE:
+               return Vehicle::Event2(button, event, modifiers);
                 break;
             */
         }
@@ -320,15 +318,15 @@ public:
             case PropMode::JETPACK:
                 Jetpack::SetPreset(preset_num, announce);
                 break;
+            case PropMode::MORSECODE:
+                MorseCode::SetPreset(preset_num, announce);
+                break;
             /*
             case PropMode::DROID:
                 Droid::SetPreset(preset_num, announce);
                 break;
-            case PropMode::MORSECODE:
-                Morsecode::SetPreset(preset_num, announce);
-                break;
-            case PropMode::TRON:
-                Tron::SetPreset(preset_num, announce);
+            case PropMode::VEHICLE:
+                Vehicle::SetPreset(preset_num, announce);
                 break;
             */
        }
@@ -348,15 +346,15 @@ public:
             case PropMode::JETPACK:
                 Jetpack::Loop();
                 break;
+            case PropMode::MORSECODE:
+                MorseCode::Loop();
+                break;
             /*
             case PropMode::DROID:
                 Droid::Loop();
                 break;
-            case PropMode::MORSECODE:
-                Morsecode::Loop();
-                break;
-            case PropMode::TRON:
-                Tron::Loop();
+            case PropMode::VEHICLE:
+                Vehicle::Loop();
                 break;
             */
        }
@@ -376,15 +374,15 @@ public:
             case PropMode::JETPACK:
                 Jetpack::DoMotion(motion, clear);
                 break;
+            case PropMode::MORSECODE:
+                MorseCode::DoMotion(motion, clear);
+                break;
             /*
             case PropMode::DROID:
                 Droid::DoMotion(motion, clear);
                 break;
-            case PropMode::MORSECODE:
-                Morsecode::DoMotion(motion, clear);
-                break;
-             case PropMode::TRON:
-                Tron::DoMotion(motion, clear);
+             case PropMode::VEHICLE:
+                Vehicle::DoMotion(motion, clear);
                 break;
             */
        }
@@ -404,15 +402,15 @@ public:
             case PropMode::JETPACK:
                 Jetpack::Clash(stab, strength);
                 break;
+            case PropMode::MORSECODE:
+                MorseCode::Clash(stab, strength);
+                break;
             /*
             case PropMode::DROID:
                 Droid::Clash(stab, strength);
                 break;
-            case PropMode::MORSECODE:
-                Morsecode::Clash(stab, strength);
-                break;
-            case PropMode::TRON:
-                Tron::Clash(stab, strength);
+            case PropMode::VEHICLE:
+                Vehicle::Clash(stab, strength);
                 break;
             */
        }
@@ -432,15 +430,15 @@ public:
             case PropMode::JETPACK:
                 Jetpack::SB_Effect(effect, location);
                 break;
+            case PropMode::MORSECODE:
+                MorseCode::SB_Effect(effect, location);
+                break;
             /* 
             case PropMode::DROID:
                 Droid::SB_Effect(effect, location);
                 break;
-            case PropMode::MORSECODE:
-                Morsecode::SB_Effect(effect, location);
-                break;
-            case PropMode::TRON:
-                Tron::SB_Effect(effect, location);
+            case PropMode::VEHICLE:
+                Vehicle::SB_Effect(effect, location);
                 break;
             */
        }
