@@ -11,7 +11,57 @@ You want to create a morsecode_prop.h file that handles Morse code input via but
     Conditional OLED: The OLED display should only function if it's included in my_config.h, and if not, it should be ignored.
 */
 
-//To do, addapt the speed of "dots", "dash", ... in function of the typing speed of the operator 
+/*
+To adapt the speed of "dots" and "dashes" in the morsecode_prop.h based on typing speed, you could measure the time between button presses and adjust the Morse code timing accordingly. Here's an approach:
+
+    Track Time Between Presses: Store the time of each button press, then calculate the interval between the current press and the previous one.
+
+    Adjust Timing Dynamically: Use the calculated interval to scale the duration of "dots" and "dashes." A shorter interval means faster typing, so the timing for each Morse code symbol can be shortened accordingly.
+
+Here’s a code snippet to help implement this:
+*/
+
+unsigned long lastPressTime = 0; // Holds the time of the last button press
+unsigned long currentPressTime;
+unsigned long typingInterval = 300; // Default interval time in milliseconds
+
+void OnButtonPress() {
+    currentPressTime = millis(); // Get current time when the button is pressed
+    
+    if (lastPressTime > 0) {
+        typingInterval = currentPressTime - lastPressTime; // Calculate interval between presses
+    }
+
+    lastPressTime = currentPressTime; // Update the last press time
+}
+
+unsigned long GetDotDuration() {
+    // Adjust dot duration based on the typing interval (shorter interval = faster dots)
+    return max(50, typingInterval / 5); // Ensure a minimum value for the dot duration
+}
+
+unsigned long GetDashDuration() {
+    // Adjust dash duration (dash is traditionally 3 times the dot duration)
+    return GetDotDuration() * 3;
+}
+
+void PlayDot() {
+    unsigned long duration = GetDotDuration();
+    // Play dot for the calculated duration
+}
+
+void PlayDash() {
+    unsigned long duration = GetDashDuration();
+    // Play dash for the calculated duration
+}
+
+/*
+In this setup:
+
+    OnButtonPress() is called whenever the power or aux button is pressed, and it updates the typing speed.
+    GetDotDuration() and GetDashDuration() return the dynamically adjusted duration for dots and dashes based on the typing speed.
+*/
+
 
 #ifndef PROPS_MORSECODE_PROP_H
 #define PROPS_MORSECODE_PROP_H
