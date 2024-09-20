@@ -3,7 +3,7 @@
 // adding MorseCode
 
 /*
-multi_prop.h allows for 4 (more coming) discrete prop files to be used, 
+multi_prop.h allows for 5 (maybe more coming) discrete prop files to be used, 
 alternating on a 2 buttons extra long push (4 seconds - not customisable !) with or without a blade attached.
 Blade detect function has no effect on multi_prop.h
 Your prop NEEDS to have two or more buttons.
