@@ -1,4 +1,4 @@
-// Revision 22 created by OlivierFlying747-8 (with a big help from ryryog25) This is work in progress.
+// Revision 22 created by OlivierFlying747-8 (with a big help from ryryog25)
 /*
 Explanation:
 
@@ -62,7 +62,7 @@ EFFECT(selfdestruct);       // jetpack exploding sound                  | v
 //EFFECT(targetting);       // viewfinder finds target sound            | o
 //EFFECT(missilelaunch);    // missile launch sound                     | o
 //EFFECT(missilegoesboom);  // explosion in the distance sound          | o
-//EFFECT(name ?)            // viewfinder going back up                 | o
+//EFFECT(disarm)            // viewfinder going back up                 | o
 
 class Jetpack : public PROP_INHERIT_PREFIX PropBase {
 public:
@@ -94,10 +94,10 @@ public:
             return true;
     }
 
-    // Overriding Event2 to resolve ambiguity
-    bool Event2(enum BUTTON button, EVENT event, uint32_t) override {
-        return Event(button, event);
-    }   // Missile launch, explosion & other functions, could come here I suppose ???
+    // Optional Event2 function, if needed (currently does nothing)
+    bool Event2(enum BUTTON button, EVENT event, uint32_t modifiers) override {
+        return false;  // No action
+    } // Missile launch, explosion & other functions, could come here I suppose ???
 
     // Transition to Running Mode (from idle to run)
     void StartJetpack() {
@@ -144,7 +144,7 @@ public:
         }
     }
 
-/* --- The following are place holders ---
+/* --- The following are more place holders ---
     // Play running Sound
     void PlayRunningSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_running)) beep();
