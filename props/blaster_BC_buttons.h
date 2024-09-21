@@ -149,7 +149,6 @@ EFFECT(destruct);
 // For mode sounds, specific "mdstun", "mdkill", and "mdauto" may be used.
 // If just a single "mode" sound for all switches exists, that will be used.
 // If no mode sounds exist in the font, a talkie version will speak the mode on switching.
-/*
 #if !defined(PROPS_MULTI_PROP_H) && !defined(PROPS_DUAL_PROP_H) // <-- Changed by Oli, was "#ifndef PROPS_DUAL_PROP_H"
 EFFECT(battery);    // for EFFECT_BATTERY_LEVEL
 EFFECT(vmbegin);    // for Begin Volume Menu
@@ -160,7 +159,8 @@ EFFECT(volmin);     // for minimum volume reached
 EFFECT(volmax);     // for maximum volume reached
 EFFECT(quote);      // for playing quotes
 #endif
-*/
+
+/* This part of the code is meant to replace the 10 lines above but is not formatted correctly for ProffieOS and/or C++
 #if !defined(PROPS_SABER_BC_BUTTONS_H)
 	// if saberBC doesn't exist, you want to define them all.
 then
@@ -177,7 +177,7 @@ then
 		EFFECT(quote);      // for playing quotes
 	#endif
 #endif
-
+*/
 
 class BlasterBC : public PROP_INHERIT_PREFIX PropBase {
 public:
