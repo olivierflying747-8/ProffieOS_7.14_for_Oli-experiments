@@ -1,4 +1,4 @@
-/* Revision 12
+/* Revision 13
 
 Introduction to Morse Code Prop for Proffieboard
 
@@ -68,15 +68,15 @@ const char* morseMap[36] = {
 
 // Define Aurebesh Map
 const char* aurebeshMap[][2] = {
-    {"A", "𐤀"}, {"B", "𐤁"}, {"C", "𐤂"}, {"D", "𐤃"}, {"E", "𐤄"}, {"F", "𐤅"}, {"G", "𐤆"}, 
-    {"H", "𐤇"}, {"I", "𐤈"}, {"J", "𐤉"}, {"K", "𐤊"}, {"L", "𐤋"}, {"M", "𐤌"}, {"N", "𐤍"}, 
-    {"O", "𐤎"}, {"P", "𐤏"}, {"Q", "𐤐"}, {"R", "𐤑"}, {"S", "𐤒"}, {"T", "𐤓"}, {"U", "𐤔"}, 
-    {"V", "𐤕"}, {"W", "𐤖"},  {"X", "𐤗"}, {"Y", "𐤘"}, {"Z", "𐤙"},
-    {"1", "𐤚"}, {"2", "𐤛"}, {"3", "𐤜"}, {"4", "𐤝"}, {"5", "𐤞"},
-    {"6", "𐤟"},  {"7", "𐤠"}, {"8", "𐤡"}, {"9", "𐤢"}, {"0", "𐤣"},
-    {".", "."}, {",", ","}, {"?", "?"}, {"\'", "\'"}, {"!", "!"},
-    {"/", "/"}, {"(", "("}, {")", ")"}, {":", ":"}, {";", ";"},
-    {"=", "="}, {"+", "+"}, {"-", "-"}, {"_", "_"}, {"\"", "\""},
+    {"A", "𐤀"}, {"B", "𐤁"},  {"C", "𐤂"}, {"D", "𐤃"},  {"E", "𐤄"},  {"F", "𐤅"}, {"G", "𐤆"}, 
+    {"H", "𐤇"}, {"I", "𐤈"},  {"J", "𐤉"}, {"K", "𐤊"},  {"L", "𐤋"},  {"M", "𐤌"}, {"N", "𐤍"}, 
+    {"O", "𐤎"}, {"P", "𐤏"},  {"Q", "𐤐"}, {"R", "𐤑"},  {"S", "𐤒"}, {"T", "𐤓"}, {"U", "𐤔"}, 
+    {"V", "𐤕"}, {"W", "𐤖"},   {"X", "𐤗"}, {"Y", "𐤘"},  {"Z", "𐤙"},
+    {"1", "𐤚"}, {"2", "𐤛"},  {"3", "𐤜"}, {"4", "𐤝"},  {"5", "𐤞"},
+    {"6", "𐤟"},  {"7", "𐤠"},  {"8", "𐤡"}, {"9", "𐤢"},  {"0", "𐤣"},
+    {".", "."}, {",", ","},  {"?", "?"}, {"\'", "\'"}, {"!", "!"},
+    {"/", "/"}, {"(", "("},  {")", ")"}, {":", ":"},   {";", ";"},
+    {"=", "="}, {"+", "+"},  {"-", "-"}, {"_", "_"},   {"\"", "\""},
     {"$", "$"}, {"&", "&"}
 };
 
@@ -142,9 +142,9 @@ public:
         return true;
     }
 
-    // Overriding Event2 to resolve ambiguity
-    bool Event2(enum BUTTON button, EVENT event, uint32_t) override {
-        return Event(button, event);
+    // Optional Event2 function, if needed (currently does nothing)
+    bool Event2(enum BUTTON button, EVENT event, uint32_t modifiers) override {
+        return false;  // No action
     }
 
     void StartPress(enum BUTTON button) {
@@ -175,7 +175,6 @@ public:
                 } else if (button == BUTTON_AUX) {
                     PlayOnSpeaker(letter);
                 }
-                if (morseCode_ != "") {
                 DisplayOnOLED(morseCode_.c_str(), letter);  // Convert String to const char*
                 break;
             }
@@ -185,15 +184,15 @@ public:
     void DisplayOnBlade(char letter) {
         if (isalpha(letter)) {
             for (int i = 0; i < NUM_BLADES; i++) {
-                blades[i].SetBlade(0, 0, 255);  // Blue for letters
+                SetColor(0, RgbColor(0, 0, 255));  // Blue for letters
             }
         } else if (isdigit(letter)) {
             for (int i = 0; i < NUM_BLADES; i++) {
-                blades[i].SetBlade(255, 0, 0);  // Red for numbers
+                SetColor(0, RgbColor(255, 0, 0));  // Red for numbers
             }
         } else {
             for (int i = 0; i < NUM_BLADES; i++) {
-                blades[i].SetBlade(0, 255, 0);  // Green for other characters
+                SetColor(0, RgbColor(0, 255, 0));  // Green for others characters
             }
         }
     }
@@ -218,87 +217,29 @@ public:
         }
     }
 
-// Helper function to fetch Morse code for a given character
-String GetMorseCode(char letter) {
-switch (letter) {
-    case 'A': return ".-";
-    case 'B': return "-...";
-    case 'C': return "-.-.";
-    case 'D': return "-..";
-    case 'E': return ".";
-    case 'F': return "..-.";
-    case 'G': return "--.";
-    case 'H': return "....";
-    case 'I': return "..";
-    case 'J': return ".---";
-    case 'K': return "-.-";
-    case 'L': return ".-..";
-    case 'M': return "--";
-    case 'N': return "-.";
-    case 'O': return "---";
-    case 'P': return ".--.";
-    case 'Q': return "--.-";
-    case 'R': return ".-.";
-    case 'S': return "...";
-    case 'T': return "-";
-    case 'U': return "..-";
-    case 'V': return "...-";
-    case 'W': return ".--";
-    case 'X': return "-..-";
-    case 'Y': return "-.--";
-    case 'Z': return "--..";
-    case '0': return "-----";
-    case '1': return ".----";
-    case '2': return "..---";
-    case '3': return "...--";
-    case '4': return "....-";
-    case '5': return ".....";
-    case '6': return "-....";
-    case '7': return "--...";
-    case '8': return "---..";
-    case '9': return "----.";
-    case '.': return ".-.-.-";
-    case ',': return "--..--";
-    case '?': return "..--..";
-    case '\'': return ".----.";
-    case '!': return "-.-.--";
-    case '/': return "-..-.";
-    case '(': return "-.--.";
-    case ')': return "-.--.-";
-    case ':': return "---...";
-    case ';': return "-.-.-.";
-    case '=': return "-...-";
-    case '+': return ".-.-.";
-    case '-': return "-....-";
-    case '_': return "..--.-";
-    case '"': return ".-..-.";
-    case '$': return "...-..-";
-    case '&': return ".-...";
-    default: return "";
+    String GetMorseCode(char letter) {
+        for (int i = 0; i < 40; i++) {
+            if (morseCodeMap[i][0][0] == letter) {
+                return morseCodeMap[i][1];
+            }
+        }
+        return "";
     }
-}
 
     void DisplayOnOLED(const char* morseCode, char letter) {
-#ifdef INCLUDE_SSD1306 || #ifdef ENABLE_SSD1306
-        DisplayOLED(morseCode.c_str(), letter);
-#endif
-    }
-
-    void DisplayOLED(const char* morseCode, char letter) {
-#ifdef USE_AUREBESH_FONT
-        // Display both Aurebesh and Latin characters
-        const char* aurebeshChar = GetAurebeshForLetter(letter);
-        oled_display.clear();            // Clear the display
-        oled_display.println(morseCode); // Morse code at the top
-        oled_display.println(aurebeshChar); // Aurebesh character
-        oled_display.println(letter);  // Latin character
-        oled_display.display();          // Refresh display to show changes
-#else
-        oled_display.clear();            // Clear the display
-        oled_display.println(morseCode); // Morse code at the top
-        oled_display.println(letter);  // Latin character
-        oled_display.display();          // Refresh display to show changes
-#endif
+        #if defined(INCLUDE_SSD1306) || defined(ENABLE_SSD1306)
+            String text = morseCode;
+            text += " ";
+            text += GetAurebeshForLetter(letter);
+            text += " ";
+            text += letter;
+            ssd1306.Clear();
+            ssd1306.SetCursor(0, 0);
+            ssd1306.print(morseCode);  // Top half: Morse code
+            ssd1306.SetCursor(0, 16);
+            ssd1306.print(text);       // Bottom half: Aurebesh and Latin
+            ssd1306.Show();
+        #endif
     }
 
     const char* GetAurebeshForLetter(char letter) {
