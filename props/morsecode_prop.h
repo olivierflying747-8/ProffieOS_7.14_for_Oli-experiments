@@ -1,4 +1,4 @@
-/* Revision 12
+/* Revision 14
 
 Introduction to Morse Code Prop for Proffieboard
 
@@ -14,7 +14,7 @@ Key Features:
 
     OLED Display (if available):
         The top half of the OLED screen displays the typed Morse code, while the bottom half shows the decoded character.
-        Supports simultaneous display of Aurebesh and Latin characters, whether or not the USE_AUREBESH_FONT definition is present in my_config.h.
+        Supports simultaneous display of Aurebesh and Latin characters.
 
     Dynamic Timing:
         The prop adjusts the timing for dots, dashes, and spaces based on the operator’s typing speed. Faster typing results in shorter dots, dashes, and gaps between characters.
@@ -42,7 +42,7 @@ This prop file provides a full-featured Morse code interaction on the lightsaber
 #include <map>
 
 // Define Morse Code Map for Letters and Numbers
-const char* morsecodeMap[][2] = {
+const char* morseCodeMap[][2] = {
     {"A", ".-"},      {"B", "-..."},   {"C", "-.-."},   {"D", "-.."},      {"E", "."},    {"F", "..-."},
     {"G", "--."},     {"H", "...."},   {"I", ".."},     {"J", ".---"},     {"K", "-.-"},  {"L", ".-.."},
     {"M", "--"},      {"N", "-."},     {"O", "---"},    {"P", ".--."},     {"Q", "--.-"}, {"R", ".-."},
@@ -53,7 +53,7 @@ const char* morsecodeMap[][2] = {
     {".", ".-.-.-"},  {",", "--..--"}, {"?", "..--.."}, {"\'", ".----."},  {"!", "-.-.--"},
     {"/", "-..-."},   {"(", "-.--."},  {")", "-.--.-"}, {":", "---..."},   {";", "-.-.-."},
     {"=", "-...-"},   {"+", ".-.-."},  {"-", "-....-"}, {"_", "..--.-"},   {"\"", ".-..-."},
-    {"$", "...-..-"}, {"&", ".-..."}
+    {"$", "...-..-"}, {"&", ".-..."},  {"@", ".--.-."}
 };
 
 /* (old table to keep for reference)
@@ -68,16 +68,16 @@ const char* morseMap[36] = {
 
 // Define Aurebesh Map
 const char* aurebeshMap[][2] = {
-    {"A", "𐤀"}, {"B", "𐤁"}, {"C", "𐤂"}, {"D", "𐤃"}, {"E", "𐤄"}, {"F", "𐤅"}, {"G", "𐤆"}, 
-    {"H", "𐤇"}, {"I", "𐤈"}, {"J", "𐤉"}, {"K", "𐤊"}, {"L", "𐤋"}, {"M", "𐤌"}, {"N", "𐤍"}, 
-    {"O", "𐤎"}, {"P", "𐤏"}, {"Q", "𐤐"}, {"R", "𐤑"}, {"S", "𐤒"}, {"T", "𐤓"}, {"U", "𐤔"}, 
-    {"V", "𐤕"}, {"W", "𐤖"},  {"X", "𐤗"}, {"Y", "𐤘"}, {"Z", "𐤙"},
-    {"1", "𐤚"}, {"2", "𐤛"}, {"3", "𐤜"}, {"4", "𐤝"}, {"5", "𐤞"},
-    {"6", "𐤟"},  {"7", "𐤠"}, {"8", "𐤡"}, {"9", "𐤢"}, {"0", "𐤣"},
-    {".", "."}, {",", ","}, {"?", "?"}, {"\'", "\'"}, {"!", "!"},
-    {"/", "/"}, {"(", "("}, {")", ")"}, {":", ":"}, {";", ";"},
-    {"=", "="}, {"+", "+"}, {"-", "-"}, {"_", "_"}, {"\"", "\""},
-    {"$", "$"}, {"&", "&"}
+    {"A", "𐤀"}, {"B", "𐤁"},  {"C", "𐤂"}, {"D", "𐤃"},  {"E", "𐤄"},  {"F", "𐤅"}, {"G", "𐤆"}, 
+    {"H", "𐤇"}, {"I", "𐤈"},  {"J", "𐤉"}, {"K", "𐤊"},  {"L", "𐤋"},  {"M", "𐤌"}, {"N", "𐤍"}, 
+    {"O", "𐤎"}, {"P", "𐤏"},  {"Q", "𐤐"}, {"R", "𐤑"},  {"S", "𐤒"}, {"T", "𐤓"}, {"U", "𐤔"}, 
+    {"V", "𐤕"}, {"W", "𐤖"},   {"X", "𐤗"}, {"Y", "𐤘"},  {"Z", "𐤙"},
+    {"1", "𐤚"}, {"2", "𐤛"},  {"3", "𐤜"}, {"4", "𐤝"},  {"5", "𐤞"},
+    {"6", "𐤟"},  {"7", "𐤠"},  {"8", "𐤡"}, {"9", "𐤢"},  {"0", "𐤣"},
+    {".", "."}, {",", ","},  {"?", "?"}, {"\'", "\'"}, {"!", "!"},
+    {"/", "/"}, {"(", "("},  {")", ")"}, {":", ":"},   {";", ";"},
+    {"=", "="}, {"+", "+"},  {"-", "-"}, {"_", "_"},   {"\"", "\""},
+    {"$", "$"}, {"&", "&"},  {"@", "@"}
 };
 
 // Timing Constants (in milliseconds)
@@ -129,7 +129,7 @@ unsigned long GetDashDuration() {
 // Morse Code Prop Class
 class MorseCode : public PROP_INHERIT_PREFIX PropBase {
 public:
-    MorseCode() : morsecode_(""), lastPressTime_(0), currentType_('\0') {}
+    MorseCode() : morseCode_(""), lastPressTime_(0), currentType_('\0') {}
 
     const char* name() override { return "MorseCode"; }
 
@@ -142,9 +142,9 @@ public:
         return true;
     }
 
-    // Overriding Event2 to resolve ambiguity
-    bool Event2(enum BUTTON button, EVENT event, uint32_t) override {
-        return Event(button, event);
+    // Optional Event2 function, if needed (currently does nothing)
+    bool Event2(enum BUTTON button, EVENT event, uint32_t modifiers) override {
+        return false;  // No action
     }
 
     void StartPress(enum BUTTON button) {
@@ -155,170 +155,121 @@ public:
         unsigned long pressDuration = millis() - lastPressTime_;
         
         if (pressDuration < GetDotDuration()) {
-            morsecode_ += ".";
+            morseCode_ += ".";
         } else if (pressDuration < GetDashDuration()) {
-            morsecode_ += "-";
+            morseCode_ += "-";
         }
 
         if (millis() - lastPressTime_ > LETTER_GAP) {
             InterpretMorse(button);
-            morsecode_ = ""; // Clear after interpreting the letter
+            morseCode_ = ""; // Clear after interpreting the character
         }
     }
 
     void InterpretMorse(enum BUTTON button) {
-        for (int i = 0; i < 36; i++) {
-            if (strcmp(morsecode_.c_str(), morsecodeMap[i][1]) == 0) {
-                char letter = morsecodeMap[i][0][0];
+        for (int i = 0; i < 54; i++) {
+            if (strcmp(morseCode_.c_str(), morseCodeMap[i][1]) == 0) {
+                char letter = morseCodeMap[i][0][0];
                 if (button == BUTTON_POWER) {
                     DisplayOnBlade(letter);
                 } else if (button == BUTTON_AUX) {
                     PlayOnSpeaker(letter);
                 }
-//was added last
-                if (morsecode_ != "") {
-                DisplayOnOLED(morsecode_.c_str(), letter);  // Convert String to const char*
-                }
-//till here
-                //DisplayOnOLED(morsecode_.c_str(), letter);
+                DisplayOnOLED(morseCode_.c_str(), letter);  // Convert String to const char*
                 break;
             }
         }
     }
 
-void DisplayOnBlade(char letter) {
-    if (isalpha(letter)) {
-        for (int i = 0; i < NUM_BLADES; i++) {
-            blades[i].SetBlade(0, 0, 255);  // Blue for letters
-        }
-    } else if (isdigit(letter)) {
-        for (int i = 0; i < NUM_BLADES; i++) {
-            blades[i].SetBlade(255, 0, 0);  // Red for numbers
-        }
-    } else {
-        for (int i = 0; i < NUM_BLADES; i++) {
-            blades[i].SetBlade(0, 255, 0);  // Green for other characters
-        }
+    void DisplayOnBlade(char letter) { /*           // I WOULD LIKE THE MAKE THE BLADES FLASH MORSE CODE, blue for letter
+        if (isalpha(letter)) {                                                                            red for numbers
+            for (int i = 0; i < NUM_BLADES; i++) {                                                        green for other characters
+                SetColor(0, RgbColor(0, 0, 255));  // Blue for letters
+            }
+        } else if (isdigit(letter)) {
+            for (int i = 0; i < NUM_BLADES; i++) {
+                SetColor(0, RgbColor(255, 0, 0));  // Red for numbers
+            }
+        } else {
+            for (int i = 0; i < NUM_BLADES; i++) {
+                SetColor(0, RgbColor(0, 255, 0));  // Green for others characters
+            }
+        } */beeper.Beep(0.05, 2000); beeper.Silence(0.05); beeper.Beep(0.05, 2000);
+
     }
-}
 
     void PlayOnSpeaker(char letter) {
-/* To implement the PlayOnSpeaker(char letter) function using Proffieboard beepers, you can generate simple sound outputs using Proffieboard's buzzer (also known as a "beeper"). ProffieOS provides the ability to play sounds for specific events, but the beeper itself is more commonly used for simple tones rather than complex sound playback.
+      // Morse code definition: . (dot) = short beep, - (dash) = long beep
+        const int dotDuration = 200;  // Duration of dot beep (ms)
+        const int dashDuration = 600; // Duration of dash beep (ms)
+        const int gapDuration = 100;  // Gap between dots/dashes (ms)
+
+        // Map letters to Morse code sequences
+        String morseCode = GetMorseCode(letter); // Fetch Morse code for the given letter
+
+        // Loop through the Morse code and play corresponding beeps
+        // (600Hz is the typical "aviation" morse code audio frequency - 800Hz is the frequency used in movies)
+        for (size_t i = 0; i < morseCode.length(); i++) {
+            if (morseCode[i] == '.') {
+                beeper.Beep(dotDuration, 800);   // Dot beep
+            } else if (morseCode[i] == '-') {
+                beeper.Beep(dashDuration, 800);  // Dash beep
+            }
+            delay(gapDuration); // Gap between beeps
+        }
+    }
+
+    String GetMorseCode(char letter) {
+        for (int i = 0; i < 54; i++) {
+            if (morseCodeMap[i][0][0] == letter) {
+                return morseCodeMap[i][1];
+            }
+        }
+        return "";
+    }
+
+    void DisplayOnOLED(const char* morseCode, char letter) {
+        #if defined(INCLUDE_SSD1306) || defined(ENABLE_SSD1306)
+            // Prepare the text for the OLED display
+            String text = morseCode;
+            text += " ";
+            text += GetAurebeshForLetter(letter);
+            text += " ";
+            text += letter;
+            STDOUT << morseCode << "\n" << text.c_str();
+/*
+            DisplayHelper<128, uint32_t;
+            BaseLayerOp<StandardDisplayController>;
+            ClearScreenOp; // Clear the full OLED screen
+            // Write Morse code at the top
+            // Write Aurebesh + Latin at the bottom
+            // Show the display
+
+        display_controller.SetCursor(0, 0);
+        display_controller.WriteText(morseCode);  // Top half: Morse code
+
+        display_controller.SetCursor(0, 16);
+        display_controller.WriteText(text.c_str());  // Bottom half: Aurebesh and Latin
+
+        display_controller.Display();  // Update the screen
 */
-  // Morse code definition: . (dot) = short beep, - (dash) = long beep
-  const int dotDuration = 200;  // Duration of dot beep (ms)
-  const int dashDuration = 600; // Duration of dash beep (ms)
-  const int gapDuration = 100;  // Gap between dots/dashes (ms)
 
-  // Map letters to Morse code sequences
-  String morsecode = GetMorseCode(letter); // Fetch Morse code for the given letter
-
-  // Loop through the Morse code and play corresponding beeps
-  for (size_t i = 0; i < morsecode.length(); i++) {
-    if (morsecode[i] == '.') {
-      beeper.Beep(dotDuration, 800); // Play a short beep for dot
-    } else if (morsecode[i] == '-') {
-      beeper.Beep(dashDuration, 800); // Play a long beep for dash
+        #endif
     }
-    delay(gapDuration); // Wait between beeps
-  }
-}
-
-// Helper function to fetch Morse code for a given character
-String GetMorseCode(char letter) {
-switch (letter) {
-    case 'A': return ".-";
-    case 'B': return "-...";
-    case 'C': return "-.-.";
-    case 'D': return "-..";
-    case 'E': return ".";
-    case 'F': return "..-.";
-    case 'G': return "--.";
-    case 'H': return "....";
-    case 'I': return "..";
-    case 'J': return ".---";
-    case 'K': return "-.-";
-    case 'L': return ".-..";
-    case 'M': return "--";
-    case 'N': return "-.";
-    case 'O': return "---";
-    case 'P': return ".--.";
-    case 'Q': return "--.-";
-    case 'R': return ".-.";
-    case 'S': return "...";
-    case 'T': return "-";
-    case 'U': return "..-";
-    case 'V': return "...-";
-    case 'W': return ".--";
-    case 'X': return "-..-";
-    case 'Y': return "-.--";
-    case 'Z': return "--..";
-    case '0': return "-----";
-    case '1': return ".----";
-    case '2': return "..---";
-    case '3': return "...--";
-    case '4': return "....-";
-    case '5': return ".....";
-    case '6': return "-....";
-    case '7': return "--...";
-    case '8': return "---..";
-    case '9': return "----.";
-    case '.': return ".-.-.-";
-    case ',': return "--..--";
-    case '?': return "..--..";
-    case '\'': return ".----.";
-    case '!': return "-.-.--";
-    case '/': return "-..-.";
-    case '(': return "-.--.";
-    case ')': return "-.--.-";
-    case ':': return "---...";
-    case ';': return "-.-.-.";
-    case '=': return "-...-";
-    case '+': return ".-.-.";
-    case '-': return "-....-";
-    case '_': return "..--.-";
-    case '"': return ".-..-.";
-    case '$': return "...-..-";
-    case '&': return ".-...";
-    default: return "";
-    }
-}
-
-void DisplayOnOLED(const char* morsecode, char letter) {
-#ifdef INCLUDE_SSD1306 || #ifdef ENABLE_SSD1306
-    DisplayOLED(morsecode, letter);
-#endif
-}
-
-void DisplayOLED(const char* morsecode, char letter) {
-#ifdef USE_AUREBESH_FONT
-    const char* aurebeshChar = GetAurebeshForLetter(letter);
-    oled_display.clear();            // Clear the display
-    oled_display.println(morsecode); // Morse code at the top
-    oled_display.println(aurebeshChar);  // Aurebesh character
-    oled_display.println(letter);    // Latin character
-    oled_display.display();          // Refresh display to show changes
-#else
-    oled_display.clear();            // Clear the display
-    oled_display.println(morsecode); // Morse code at the top
-    oled_display.println(letter);    // Latin character
-    oled_display.display();          // Refresh display to show changes
-#endif
-}
 
     const char* GetAurebeshForLetter(char letter) {
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i < 54; i++) {
             if (aurebeshMap[i][0][0] == letter) {
                 return aurebeshMap[i][1];
             }
         }
-        return "?";  // Fallback for unsupported characters
+        return "??";  // Fallback for unsupported characters
     }
 
 private:
-    String morsecode_;      // Holds the current Morse code input
-    unsigned long lastPressTime_;  // Time of the last button press
-    char currentType_;       // Currently decoded character
+    String morseCode_;              // Holds the current Morse code input
+    unsigned long lastPressTime_;   // Time of the last button press
+    char currentType_;              // Currently decoded character
 };
 
 #endif // PROPS_MORSECODE_PROP_H
@@ -333,7 +284,7 @@ Key Features:
         The GetDotDuration() and GetDashDuration() functions adjust timing based on the speed of button presses. Faster typing results in shorter dots and dashes, making the input more fluid and responsive.
 
     Morse Code Decoding for All Characters:
-        The Morse alphabet (letters and numbers) is fully included in the morsecodeMap, ensuring complete decoding functionality.
+        The Morse alphabet (letters and numbers) is fully included in the morseCodeMap, ensuring complete decoding functionality.
 
     Dynamic Word Spacing:
         The word and letter spacing adapts based on typing speed. The LETTER_GAP (800ms) and WORD_GAP (1200ms) constants define the spacing, and these can be adjusted dynamically based on the typing interval, ensuring natural input.
@@ -357,7 +308,7 @@ Code Breakdown:
         The power button is used for Morse code input, while the aux button triggers sound playback. The timing for dots, dashes, and spaces dynamically adapts based on the interval between button presses.
 
     Morse Code Interpretation:
-        The InterpretMorse function compares the typed code against the morsecodeMap to return the correct letter or number.
+        The InterpretMorse function compares the typed code against the morseCodeMap to return the correct letter or number.
 
     Blade and Speaker Control:
         The PlayOnBladeOrSpeaker function determines whether to display Morse code on the blade or play it on the speaker based on the button used.
