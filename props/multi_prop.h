@@ -1,6 +1,5 @@
-// attempt 037 (working version for saber-blaster-detonator-jetpack, all with sound-effects on transition between props.
-//                                                                       (provided by NoSloppy)
-// adding MorseCode
+// version 038 (working version for saber-blaster(with bullet count)-detonator-jetpack-morsecode, all with sound-effects on transition between props.
+//                                                                                                 (provided by NoSloppy)
 
 /*
 multi_prop.h allows for 5 (maybe more coming) discrete prop files to be used, 
@@ -45,10 +44,9 @@ EFFECT(volmax);     // for maximum volume reached
                                                 //                         | (MUST have "bullets counts" activated in CONFIG_BOTTOM)
 #include "../props/detonator.h"                 //use Detonator            | Compiling with multi_prop.h
 #include "../props/jetpack_prop.h"              //use Jetpack              | Compiling with multi_prop.h
-#include "../props/morsecode_prop.h"            //use MorseCode - In progress (type morse code on the buttons & it plays on LEDs, speaker & OLED)
-                                                //(another of my crazy idea!)
-//#include "../props/droid_prop.h"              //In progress (plays with droids sounds)
-//#include "../props/vehicle_prop.h"            //To be created (find better name - plays with SW vehicles sounds and their weapons - ships, speeders, walkers, pod-racers, ...)
+#include "../props/morsecode_prop.h"            //use MorseCode            | Compiling with multi_prop.h
+//#include "../props/droid_prop.h"              //In progress but very far from ready (plays with droids sounds)
+//#include "../props/vehicle_prop.h"            //To be created (find a better name - plays with SW vehicles sounds and their weapons - ships, speeders, walkers, pod-racers, ...)
 #undef PROP_TYPE
 #define PROP_TYPE MultiProp <SaberFett263Buttons, Blaster, Detonator, Jetpack, MorseCode>
 #endif
@@ -74,17 +72,17 @@ EFFECT(sabermode);
 EFFECT(detmode);
 EFFECT(jetmode);
 //"NO_EFFECT"(morsecodemode); // No need for a "morsecode.wav" file. This is done using "Beepers".
-//EFFECT(droidmode);        // Uncomment if implementing droid
-//EFFECT(vehiclemode);      // Uncomment if implementing Vehicle
+//EFFECT(droidmode);          // Uncomment if implementing droid
+//EFFECT(vehiclemode);        // Uncomment if implementing Vehicle
 
 enum class PropMode {
     SABER,
     BLASTER,
     DETONATOR,
     JETPACK,
-    MORSECODE,      // (morsecode_prop.h in progress)
-    //DROID,        // Uncomment when ready to implement Droid functionality (droid_prop.h in progress)
-    //VEHICLE,      // Uncomment if implementing Vehicle
+    MORSECODE,
+    //DROID,      // Uncomment when ready to implement Droid functionality (droid_prop.h in progress bur very far from ready !!!)
+    //VEHICLE,    // Uncomment if implementing Vehicle
 };
 
 // Define the duration for TWO_BUTTONS_eXtra_LONG_PUSH (4 sec)
@@ -100,77 +98,64 @@ BUTTON_COMBO_STATE comboState = BUTTONS_IDLE;
 unsigned long holdStartTime = 0;
 PropMode currentMode = PropMode::SABER;  // Initial state is Saber
 
+void beep() { //auto beepers (Fallback beep if sound fails/is missing), thanks to ryryog25
+    beeper.Beep(0.05, 2000);
+    beeper.Silence(0.05);
+    beeper.Beep(0.05, 2000);
+}
+
 // Function to handle mode switching
 void switchModes() {
     switch (currentMode) {
         case PropMode::SABER:
-            if (!hybrid_font.PlayPolyphonic(&SFX_blastermode)) { //auto beepers (Fallback beep if sound fails/is missing)
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_blastermode)) beep();
             currentMode = PropMode::BLASTER;
+            Serial.println("Blaster Mode");
             break;
         case PropMode::BLASTER:
-            if (!hybrid_font.PlayPolyphonic(&SFX_detmode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_detmode)) beep();
             currentMode = PropMode::DETONATOR;
+            Serial.println("Detonator Mode");
             break;
         case PropMode::DETONATOR:
-            if (!hybrid_font.PlayPolyphonic(&SFX_jetmode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_jetmode)) beep();
             currentMode = PropMode::JETPACK;
+            Serial.println("Jetpack Mode");
             break;
         case PropMode::JETPACK:
-            //No "SFX" for MorseCode, it will be in morse code !
+            //No "SFX" for MorseCode, it is in morse code !
                 { beeper.Beep(0.05, 2000);
                 beeper.Silence(0.05);
                 beeper.Beep(0.05, 4000);
-                beeper.Silence(0.05);
+                beeper.Silence(0.05);                           // This says "AI" !
                 beeper.Beep(0.05, 2000);
                 beeper.Silence(0.05);
                 beeper.Beep(0.05, 2000);
                 };
             currentMode = PropMode::MORSECODE;
+            Serial.println("Morse Code Mode");
+            break;
         case PropMode::MORSECODE:
+            if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) beep();
+            currentMode = PropMode::SABER;
+            Serial.println("Saber Mode");
+            break;
             /*
-            if (!hybrid_font.PlayPolyphonic(&SFX_droidmode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_droidmode)) beep();
             currentMode = PropMode::DROID;
+            Serial.println("Droid Mode");
             break;
             */
-            if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
-            currentMode = PropMode::SABER;
-            break;
         /*
         case PropMode::DROID:
-            if (!hybrid_font.PlayPolyphonic(&SFX_vehiclemode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_vehiclemode)) beep();
             currentMode = PropMode::VEHICLE;
+            Serial.println("Vehicle Mode");
             break;
         case PropMode::VEHICLE:
-            if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) { //auto beepers
-                beeper.Beep(0.05, 2000);
-                beeper.Silence(0.05);
-                beeper.Beep(0.05, 2000);
-                };
+            if (!hybrid_font.PlayPolyphonic(&SFX_sabermode)) beep();
             currentMode = PropMode::SABER;
+            Serial.println("Saber Mode");
             break;
         */
     }
@@ -290,7 +275,7 @@ public:
                 return Jetpack::Event2(button, event, modifiers);
                 break;
             case PropMode::MORSECODE:
-                return MorseCode::Event2(button, event);
+                return MorseCode::Event2(button, event, modifiers);
                 break;
             /*
             case PropMode::DROID:
@@ -443,16 +428,6 @@ public:
             */
        }
     }
-
-/*
-private:
-    void beep() { //auto beepers (Fallback beep if sound fails/is missing), thanks to ryryog25
-        beeper.Beep(0.05, 2000);
-        beeper.Silence(0.05);
-        beeper.Beep(0.05, 2000);
-    }
-*/
-
 };
 
 #endif // PROPS_MULTI_PROP_H

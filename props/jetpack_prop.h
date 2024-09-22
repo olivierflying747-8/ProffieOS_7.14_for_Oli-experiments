@@ -1,4 +1,4 @@
-// Revision 22 created by OlivierFlying747-8 (with a big help from ryryog25)
+// Revision 25 created by OlivierFlying747-8 (with a big help from ryryog25)
 /*
 Explanation:
 
@@ -31,10 +31,17 @@ Explanation:
         Monitors the 1-minute timer during idle mode to turn off the jetpack completely if the time expires.
 
     To do:
-        Add "Missile functions", would a double click or a long push work ??? Should this be in "Event" or "Event2" ???
-                                                                                What is "Event2" for anyways ???
-        Add "blades effects", if at all possible ??? (probably needs to be done in "my_config.h" ???)
+        - Complete "blades effects" in "my_config.h"
+          Here’s an example configuration for the blade setup:
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Red, Blue>>>,
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Red, White>, EffectUser<EFFECT_USER1>>>, // Running mode (yellow glow)
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Orange, White>, EffectUser<EFFECT_USER2>>>, // Stuttering mode (orange flash)
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Purple, White>, EffectUser<EFFECT_USER3>>>, // False start (purple flash)
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Red, White>, EffectUser<EFFECT_USER4>>>, // Self-destruct (red flash)
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<Blue, White>, EffectUser<EFFECT_USER5>>>, // Shutdown (blue glow)
+StylePtr<InOutTrL<TrFade<300>, TrFade<300>, AudioFlicker<White, White>, EffectUser<EFFECT_USER6>>>, // Idle (dim white)
 
+        - Complete "Missile functions" activated with POWER & AUX, and make animations for OLED
 */
 
 #ifndef PROPS_JETPACK_PROP_H
@@ -49,20 +56,22 @@ Explanation:
 #define JETPACK_IDLE_TIME 1000 * 60 * 1 // Jetpack max idle time in millisec (default 1 min) before shutdown
 #endif
 
-EFFECT(startidlemode);      // jetpack starting at idle (0 to idle)     | v   <-- Just a check-list to make sure
-EFFECT(idle);               // jetpack running at idle                  | v    the various sound effects are added.
+// == sounds for jetpack ==
+EFFECT(startidlemode);      // jetpack starting at idle (0 to idle)     | v   <-- Just a check-list to make sure the
+EFFECT(idle);               // jetpack running at idle                  | v    various sound effects are added in the code.
 EFFECT(falsestart);         // jetpack false start sound                | v
 EFFECT(startjetpack);       // jetpack starting sound (idle to run)     | v
 EFFECT(running);            // jetpack running sound                    | v
 EFFECT(stuttering);         // jetpack stuttering sound                 | v
 EFFECT(shutdown);           // jetpack stopping sound (run to idle)     | v
 //"NO_EFFECT()"             // I don't think idle to zero is needed ??? | v  // Not real syntax, just a place holder.
+// == sounds for missile ==
 EFFECT(selfdestruct);       // jetpack exploding sound                  | v
-//EFFECT(aiming);           // viewfinder coming down "click" sound     | o  // From Mando S02E06 "nice shot" "I was aiming for the other one"
-//EFFECT(targetting);       // viewfinder finds target sound            | o
-//EFFECT(missilelaunch);    // missile launch sound                     | o
-//EFFECT(missilegoesboom);  // explosion in the distance sound          | o
-//EFFECT(disarm)            // viewfinder going back up                 | o
+EFFECT(aiming);             // viewfinder coming down "click" sound     | v  // From Mando S02E06 "nice shot" "I was aiming for the other one"
+EFFECT(targetting);         // viewfinder finds target sound            | v
+EFFECT(missilelaunch);      // missile launch sound                     | v  // Make animations for OLED from the episode
+EFFECT(missilegoesboom);    // explosion in the distance sound          | v
+EFFECT(disarm);             // viewfinder going back up                 | v
 
 class Jetpack : public PROP_INHERIT_PREFIX PropBase {
 public:
@@ -74,68 +83,74 @@ public:
         if (event != EVENT_PRESSED) return false;
 
         if (button == BUTTON_POWER) {
-            if (idle_) StartJetpack();              // Transition from idle to running (rev more up)
-            else
-                if (jetpack_on_) ShutDownMode();    // Transition from running to idle (rev down)
-                else StartIdleMode();               // Jetpack initially starts idle (rev up)
-                }
+            if (idle_) StartJetpack();                  // Transition from idle to running (rev more up)
+            else if (jetpack_on_) ShutDownMode();       // Transition from running to idle (rev down)
+            else StartIdleMode();                       // Jetpack initial start from 0 to idle (rev up)
             return true;
+        }
 
-        if (button == BUTTON_AUX)
-            if (jetpack_on_)
-                if (!hybrid_font.PlayPolyphonic(&SFX_stuttering)) beep();       // Jetpack running, play stuttering
-            else
-                if (idle_) {
-                    if (!hybrid_font.PlayPolyphonic(&SFX_falsestart)) beep();   // Jetpack idle, play false start and reset idle timer
-                    StartIdleLoop();
-                    } 
-                else
-                    if (!hybrid_font.PlayPolyphonic(&SFX_selfdestruct)) beep(); // Jetpack off, play self-destruct
+        if (button == BUTTON_AUX) {
+            if (jetpack_on_) {
+            PlayStutteringSound();                      // Jetpack running, play stuttering
+            //SaberBase::DoEffect(EFFECT_USER2, 0, 0);  // Trigger user effect for stuttering
+            } else if (idle_) {
+            PlayFalseStartSound();                      // Jetpack idle, play false start and reset idle timer
+            //SaberBase::DoEffect(EFFECT_USER3, 0, 0);  // Trigger user effect for false start
+            } else PlaySelfDestructSound();             // Jetpack off, play self-destruct
+            //SaberBase::DoEffect(EFFECT_USER4, 0, 0);  // Trigger user effect for self-destruct
             return true;
+        }
+        if ((button == BUTTON_POWER) && (button == BUTTON_AUX)) {
+            MissileLaunch();
+            return true;
+        }
     }
 
     // Optional Event2 function, if needed (currently does nothing)
     bool Event2(enum BUTTON button, EVENT event, uint32_t modifiers) override {
         return false;  // No action
-    } // Missile launch, explosion & other functions, could come here I suppose ???
+    } // Missile launch, explosion & other functions, could be added here, I suppose ???
 
     // Transition to Running Mode (from idle to run)
     void StartJetpack() {
         jetpack_on_ = true;
         idle_ = false;
         if (!hybrid_font.PlayPolyphonic(&SFX_startjetpack)) beep();
-        if (!hybrid_font.PlayPolyphonic(&SFX_running)) beep();          // Will the jetpack running sound loop until
-        Serial.println("Jetpack ON and Running");                       // next power press ???
-        }
+        PlayRunningSound();                             // Will the jetpack running sound loop until next power press ???
+        //SaberBase::DoEffect(EFFECT_USER1, 0, 0);      // Trigger user effect for running
+        Serial.println("Jetpack ON and Running");
+    }
 
     // Transition from Running Mode (from run to idle)
     void ShutDownMode() {
         jetpack_on_ = false;
         idle_ = true;
         if (!hybrid_font.PlayPolyphonic(&SFX_shutdown)) beep();
+        //SaberBase::DoEffect(EFFECT_USER5, 0, 0);  // Trigger user effect for shutting down
         Serial.println("Jetpack Shutting Down");
-        }
+    }
 
-    // Transition to Idle Mode (from 0 to idle)
+    // Initial start transition Mode (from 0 to idle)
     void StartIdleMode() {
         jetpack_on_ = false;
         idle_ = true;
         timer_ = millis();  // Start the idle timer
         if (!hybrid_font.PlayPolyphonic(&SFX_startidlemode)) beep();
+        //SaberBase::DoEffect(EFFECT_USER6, 0, 0);  // Trigger user effect for idle
         StartIdleLoop();
-        Serial.println("Jetpack OFF, but Idling");
-        }
+        Serial.println("Jetpack Idling");
+    }
 
     // Stop Idle Mode (Jetpack completely off)
     void StopIdleMode() {
         idle_ = false;
-        Serial.println("Jetpack completely OFF");
-        }
+        Serial.println("Jetpack Completely OFF");
+    }
 
     // Loop for Idle Mode
     void StartIdleLoop() {
         if (!hybrid_font.PlayPolyphonic(&SFX_idle)) beep();
-        }
+    }
 
     // Main loop to handle idle timer
     void Loop() override {
@@ -144,29 +159,86 @@ public:
         }
     }
 
-/* --- The following are more place holders ---
     // Play running Sound
     void PlayRunningSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_running)) beep();
-        }
+    }
+
     // Jetpack running, play stuttering sound
     void PlayStutteringSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_stuttering)) beep();
-        }
+        Serial.println("Jetpack Stuttering");
+    }
+
     // Jetpack idle, play false start sound
     void PlayFalseStartSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_falsestart)) beep();
-        }
+        Serial.println("Jetpack False Start");
+        StartIdleLoop();
+    }
+
+    // Jetpack off, play self destruct
     void PlaySelfDestructSound() {
         if (!hybrid_font.PlayPolyphonic(&SFX_selfdestruct)) beep();
+        Serial.println("Jetpack Self Destruct");
         StopIdleMode(); // Turn off the jetpack completely after self-destruct
+    }
+
+    // Missile launch sequence
+    void MissileLaunch() {
+        if (!hybrid_font.PlayPolyphonic(&SFX_aiming)) beep();
+        Serial.println("Aiming");
+        // display on OLED (if OLED available) animation of viewfinder coming down;
+        if (!hybrid_font.PlayPolyphonic(&SFX_targetting)) beep();
+        Serial.println("Targetting");
+        // display on OLED (if OLED available) animation of targetting;
+        if (!hybrid_font.PlayPolyphonic(&SFX_missilelaunch)) beep();
+        Serial.println("Launching Missile");
+        // display on OLED (if OLED available) animation of jetpack launching missile;
+        if (!hybrid_font.PlayPolyphonic(&SFX_missilegoesboom)) beep();
+        // display on OLED (if OLED available) animation of explosion;
+        Serial.println("Missile Explodes");
+/*
+        if !(jetpack_on_) {
+            //SaberBase::DoEffect(EFFECT_USER4, 0, 0);
+            #if defined(INCLUDE_SSD1306) || defined(ENABLE_SSD1306)
+            Display on OLED ("Mando - Nice shot/nBoba - I was aiming for the other one")
+            #endif
         }
 */
+        if (!hybrid_font.PlayPolyphonic(&SFX_disarm)) beep();
+        // display on OLED (if OLED available) animation of viewfinder going back up;
+        Serial.println("Disarming");
+    }
 
-  void DoMotion(const Vec3&, bool) override { }     //I think a jetpack shouldn't have "movement effects" ???
+    void DoMotion(const Vec3&, bool) override { }  // I think a jetpack shouldn't have "movement effects"
 
 private:
-    void beep() { //auto beepers (Fallback beep if sound fails/is missing), thanks to ryryog25
+/*
+    void PlaySound(int sound) {  // Changed to pass int by value, no & needed
+        if (!hybrid_font.PlayPolyphonic(sound)) {
+            beep();
+        }
+    }
+    void PlaySound(Effect* sound) {  // Use Effect* directly
+        if (!hybrid_font.PlayPolyphonic(sound)) {
+            beep();
+        }
+    }
+    void PlaySound(SoundFont& sound) {
+        if (!hybrid_font.PlayPolyphonic(&sound)) {
+            beep();
+        }
+    }
+
+    void PlaySound(sound) {
+        if (!hybrid_font.PlayPolyphonic(&SFX_sound)) {
+            beep();
+        }
+    }
+*/
+
+    void beep() { // auto beepers (Fallback beep if sound fails/is missing), thanks to ryryog25
         beeper.Beep(0.05, 2000);
         beeper.Silence(0.05);
         beeper.Beep(0.05, 2000);
@@ -178,3 +250,4 @@ private:
 };
 
 #endif // PROPS_JETPACK_PROP_H
+
