@@ -48,32 +48,38 @@ const char* morseCodeMap[][2] = {
     {"M", "--"},      {"N", "-."},     {"O", "---"},    {"P", ".--."},     {"Q", "--.-"}, {"R", ".-."},
     {"S", "..."},     {"T", "-"},      {"U", "..-"},    {"V", "...-"},     {"W", ".--"},  {"X", "-..-"},
     {"Y", "-.--"},    {"Z", "--.."},
+
     {"1", ".----"},   {"2", "..---"},  {"3", "...--"},  {"4", "....-"},    {"5", "....."},
     {"6", "-...."},   {"7", "--..."},  {"8", "---.."},  {"9", "----."},    {"0", "-----"},
+
+    // Special characters are not part of the international morse code.    
     {".", ".-.-.-"},  {",", "--..--"}, {"?", "..--.."}, {"\'", ".----."},  {"!", "-.-.--"},
     {"/", "-..-."},   {"(", "-.--."},  {")", "-.--.-"}, {":", "---..."},   {";", "-.-.-."},
     {"=", "-...-"},   {"+", ".-.-."},  {"-", "-....-"}, {"_", "..--.-"},   {"\"", ".-..-."},
     {"$", "...-..-"}, {"&", ".-..."},  {"@", ".--.-."}
 };
 
-/* (old table to keep for reference)
+/* (table of "real" international morse code. To keep for reference. There are many tables !)
 const char* morseMap[36] = {
     ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..",      // A-I
     ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.",    // J-R
     "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--..",           // S-Z
-    "-----", ".----", "..---", "...--", "....-", ".....",               // 0-5
-    "-....", "--...", "---..", "----."                                  // 6-9
+
+    "-----", ".----", "..---", "...--", "....-",                        // 0-4
+    ".....", "-....", "--...", "---..", "----."                         // 5-9
 };
 */
 
-// Define Aurebesh Map
+// Define Aurebesh Map       <-- TO BE CONFIRMED IF THIS LOOKS LIKE AUREBESH ??? (Special Characters are Latin)
 const char* aurebeshMap[][2] = {
     {"A", "𐤀"}, {"B", "𐤁"},  {"C", "𐤂"}, {"D", "𐤃"},  {"E", "𐤄"},  {"F", "𐤅"}, {"G", "𐤆"}, 
     {"H", "𐤇"}, {"I", "𐤈"},  {"J", "𐤉"}, {"K", "𐤊"},  {"L", "𐤋"},  {"M", "𐤌"}, {"N", "𐤍"}, 
     {"O", "𐤎"}, {"P", "𐤏"},  {"Q", "𐤐"}, {"R", "𐤑"},  {"S", "𐤒"}, {"T", "𐤓"}, {"U", "𐤔"}, 
     {"V", "𐤕"}, {"W", "𐤖"},   {"X", "𐤗"}, {"Y", "𐤘"},  {"Z", "𐤙"},
+
     {"1", "𐤚"}, {"2", "𐤛"},  {"3", "𐤜"}, {"4", "𐤝"},  {"5", "𐤞"},
     {"6", "𐤟"},  {"7", "𐤠"},  {"8", "𐤡"}, {"9", "𐤢"},  {"0", "𐤣"},
+    
     {".", "."}, {",", ","},  {"?", "?"}, {"\'", "\'"}, {"!", "!"},
     {"/", "/"}, {"(", "("},  {")", ")"}, {":", ":"},   {";", ";"},
     {"=", "="}, {"+", "+"},  {"-", "-"}, {"_", "_"},   {"\"", "\""},
@@ -182,27 +188,32 @@ public:
     }
 
     void DisplayOnBlade(char letter) { /*           // I WOULD LIKE THE MAKE THE BLADES FLASH MORSE CODE, blue for letter
-        if (isalpha(letter)) {                                                                            red for numbers
-            for (int i = 0; i < NUM_BLADES; i++) {                                                        green for other characters
-                SetColor(0, RgbColor(0, 0, 255));  // Blue for letters
-            }
-        } else if (isdigit(letter)) {
-            for (int i = 0; i < NUM_BLADES; i++) {
-                SetColor(0, RgbColor(255, 0, 0));  // Red for numbers
-            }
-        } else {
-            for (int i = 0; i < NUM_BLADES; i++) {
-                SetColor(0, RgbColor(0, 255, 0));  // Green for others characters
-            }
-        } */beeper.Beep(0.05, 2000); beeper.Silence(0.05); beeper.Beep(0.05, 2000);
-
+        if (isalpha(letter)) {                                                          |                 red for numbers
+            for (int i = 0; i < NUM_BLADES; i++) {                                      |                 green for other characters
+                SetColor(0, RgbColor(0, 0, 255));  // Blue for letters                  |
+            }                                                                           |
+        } else if (isdigit(letter)) {                                                   |
+            for (int i = 0; i < NUM_BLADES; i++) {                                      |  This is all ChatGPT "mishmash"
+                SetColor(0, RgbColor(255, 0, 0));  // Red for numbers                   |
+            }                                                                           |
+        } else {                                                                        |
+            for (int i = 0; i < NUM_BLADES; i++) {                                      |
+                SetColor(0, RgbColor(0, 255, 0));  // Green for others characters       |
+            }                                                                           |
+        } */beeper.Beep(0.2, 600);     //
+            beeper.Silence(0.15);      // Temporary replacement "action" until I know how/where to code it !
+            beeper.Beep(0.2, 600);     //
+            beeper.Silence(0.15);      // This is "S" for "S.O.S" !
+            beeper.Beep(0.2, 600);     //
     }
 
-    void PlayOnSpeaker(char letter) {
+    void PlayOnSpeaker(char letter) { // Duration in millisec
       // Morse code definition: . (dot) = short beep, - (dash) = long beep
-        const int dotDuration = 200;  // Duration of dot beep (ms)
-        const int dashDuration = 600; // Duration of dash beep (ms)
-        const int gapDuration = 100;  // Gap between dots/dashes (ms)
+        const int dotDuration = 200;  // Dot beep duration
+        const int dashDuration = 600; // Dash beep duration - in theory it should be as long as 3 dots
+        const int gapDuration = 190;  // Gap between dots/dashes - in theory it should be as long as a dot
+        const int charGap = 570;      // Gap between characters - in theory, it should be as long as 3 dots (to be implemented)
+        // const int wordGap = 1400;  // Gap between words - in theory, it should be as long as 7 dots (will not be implemented)
 
         // Map letters to Morse code sequences
         String morseCode = GetMorseCode(letter); // Fetch Morse code for the given letter
@@ -237,23 +248,22 @@ public:
             text += " ";
             text += letter;
             STDOUT << morseCode << "\n" << text.c_str();
-/*
-            DisplayHelper<128, uint32_t;
-            BaseLayerOp<StandardDisplayController>;
-            ClearScreenOp; // Clear the full OLED screen
-            // Write Morse code at the top
-            // Write Aurebesh + Latin at the bottom
+            // Write Morse code on the top line
+            // Write Aurebesh + Latin on the bottom line
             // Show the display
+/*
+            DisplayHelper<128, uint32_t;                    |
+            BaseLayerOp<StandardDisplayController>;         | This is from "Bullet count" but nothing compiles !!!
+            ClearScreenOp; // Clear the full OLED screen    |
 
-        display_controller.SetCursor(0, 0);
-        display_controller.WriteText(morseCode);  // Top half: Morse code
-
-        display_controller.SetCursor(0, 16);
-        display_controller.WriteText(text.c_str());  // Bottom half: Aurebesh and Latin
-
-        display_controller.Display();  // Update the screen
+        display_controller.SetCursor(0, 0);                                                 |
+        display_controller.WriteText(morseCode);     // Top half: Morse code                |
+                                                                                            |
+        display_controller.SetCursor(0, 16);                                                | More ChatGPT "mishmash"
+        display_controller.WriteText(text.c_str());  // Bottom half: Aurebesh and Latin     |
+                                                                                            |
+        display_controller.Display();  // Update the screen                                 |
 */
-
         #endif
     }
 
