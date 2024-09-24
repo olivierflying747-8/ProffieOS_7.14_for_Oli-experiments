@@ -160,22 +160,20 @@ EFFECT(volmax);     // for maximum volume reached
 EFFECT(quote);      // for playing quotes
 #endif
 
-/* This part of the code is meant to replace the 10 lines above but is not formatted correctly for ProffieOS and/or C++
-#if !defined(PROPS_SABER_BC_BUTTONS_H)
-	// if saberBC doesn't exist, you want to define them all.
-then
-	EFFECT(volup);      // for increse volume
-	EFFECT(voldown);    // for decrease volume
-	EFFECT(volmin);     // for minimum volume reached
-	EFFECT(volmax);     // for maximum volume reached
-	#if !defined(PROPS_SABER_FETT263_BUTTONS_H)
-    // but if Fett263 exits, you only want to define the 4 above.
-	then
-		EFFECT(battery);    // for EFFECT_BATTERY_LEVEL
-		EFFECT(vmbegin);    // for Begin Volume Menu
-		EFFECT(vmend);      // for End Volume Menu
-		EFFECT(quote);      // for playing quotes
-	#endif
+/* THE COMMENTED OUT CODE BELLOW IS NOT WORKING CORRECTLY FOR THE INTENDED PURPOSE !!!
+#ifndef PROPS_SABER_BC_BUTTONS_H
+  // If saberBC doesn't exist, define these effects.
+  EFFECT(volup);      // for increase volume
+  EFFECT(voldown);    // for decrease volume
+  EFFECT(volmin);     // for minimum volume reached
+  EFFECT(volmax);     // for maximum volume reached
+  #ifndef PROPS_SABER_FETT263_BUTTONS_H
+    // If Fett263 doesn't exist, define these additional effects.
+    EFFECT(battery);    // for EFFECT_BATTERY_LEVEL
+    EFFECT(vmbegin);    // for Begin Volume Menu
+    EFFECT(vmend);      // for End Volume Menu
+    EFFECT(quote);      // for playing quotes
+  #endif
 #endif
 */
 
