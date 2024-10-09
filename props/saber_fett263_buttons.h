@@ -5238,6 +5238,22 @@ SaberFett263Buttons() : PropBase() {}
 
 #else
 // 2 Button Controls
+                                                                                    // Added by Oli
+      case EVENTID(BUTTON_AUX, EVENT_THIRD_SAVED_CLICK_SHORT, MODE_OFF):            // Added by Oli
+        #define DEGREES_TO_RADIANS (M_PI / 180)                                     // Added by Oli
+         if (fusor.angle1() > 45 * DEGREES_TO_RADIANS) {                            // Added by Oli
+           // up                                                                    // Added by Oli
+        SetPreset(0, true);                                                         // Added by Oli
+         } else if (fusor.angle1() < -45 * DEGREES_TO_RADIANS) {                    // Added by Oli
+           // down                                                                  // Added by Oli
+        SetPreset(-1, true);                                                        // Added by Oli
+         } else {                                                                   // Added by Oli
+           // horizontal                                                            // Added by Oli
+          CurrentPreset tmp;                                                        // Added by Oli
+          tmp.SetPreset(-1);                                                        // Added by Oli
+          SetPreset(tmp.preset_num / 2, true);                                      // Added by Oli
+         }                                                                          // Added by Oli
+		
       case EVENTID(BUTTON_AUX, EVENT_PRESSED, MODE_OFF):
         SaberBase::RequestMotion();
         saber_off_time_millis_ = millis();
