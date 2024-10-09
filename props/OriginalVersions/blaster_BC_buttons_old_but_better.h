@@ -149,8 +149,7 @@ EFFECT(destruct);
 // For mode sounds, specific "mdstun", "mdkill", and "mdauto" may be used.
 // If just a single "mode" sound for all switches exists, that will be used.
 // If no mode sounds exist in the font, a talkie version will speak the mode on switching.
-/*
-#if !defined(PROPS_MULTI_PROP_H) && !defined(PROPS_DUAL_PROP_H) // <-- Changed by Oli, was "#ifndef PROPS_DUAL_PROP_H"
+#ifndef PROPS_DUAL_PROP_H
 EFFECT(battery);    // for EFFECT_BATTERY_LEVEL
 EFFECT(vmbegin);    // for Begin Volume Menu
 EFFECT(vmend);      // for End Volume Menu
@@ -160,22 +159,6 @@ EFFECT(volmin);     // for minimum volume reached
 EFFECT(volmax);     // for maximum volume reached
 EFFECT(quote);      // for playing quotes
 #endif
-*/
-#ifndef PROPS_SABER_BC_BUTTONS_H
-  // If saberBC doesn't exist, you want to define all these effects.
-  EFFECT(volup);      // for increase volume
-  EFFECT(voldown);    // for decrease volume
-  EFFECT(volmin);     // for minimum volume reached
-  EFFECT(volmax);     // for maximum volume reached
-  #ifndef PROPS_SABER_FETT263_BUTTONS_H
-    // but If Fett263 exist, you don't want to define these effects.
-    EFFECT(battery);    // for EFFECT_BATTERY_LEVEL
-    EFFECT(vmbegin);    // for Begin Volume Menu
-    EFFECT(vmend);      // for End Volume Menu
-    EFFECT(quote);      // for playing quotes
-  #endif
-#endif
-// by Oli
 
 class BlasterBC : public PROP_INHERIT_PREFIX PropBase {
 public:
@@ -595,7 +578,7 @@ RefPtr<BufferedWavPlayer> wav_player;
 // Enter / Exit Volume Menu
       case EVENTID(BUTTON_MODE_SELECT, EVENT_FOURTH_HELD, MODE_ON):
       case EVENTID(BUTTON_MODE_SELECT, EVENT_FOURTH_HELD, MODE_OFF):
-      case EVENTID(BUTTON_MODE_SELECT, EVENT_FOURTH_HELD, MODE_ON | BUTTON_CLIP_DETECT):
+      case EVENTID(BUTTON_MODE_SELECT, EVENT_FOURTH_HELD, MODE_ON  | BUTTON_CLIP_DETECT):
       case EVENTID(BUTTON_MODE_SELECT, EVENT_FOURTH_HELD, MODE_OFF | BUTTON_CLIP_DETECT):
         VolumeMenu();
         return true;
@@ -829,5 +812,4 @@ RefPtr<BufferedWavPlayer> wav_player;
   }
 };
 
-#endif
-
+#endif  // PROPS_BLASTER_BC_H
